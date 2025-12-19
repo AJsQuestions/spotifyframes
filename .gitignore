@@ -54,3 +54,20 @@ data/streaming_history/*.json
 # Environment variables
 .env
 .env.local
+
+# Spotify cache (contains tokens)
+.cache
+.cache-*
+notebooks/.cache
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# macOS
+.DS_Store
+*.DS_Store
+
+# Jupyter
+.ipynb_checkpoints/
