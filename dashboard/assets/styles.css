@@ -461,6 +461,13 @@ body::before {
 
 .card-icon {
     font-size: 18px;
+    flex-shrink: 0;
+}
+
+.card-title-text {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
 }
 
 .card-body {

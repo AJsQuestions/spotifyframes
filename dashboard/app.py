@@ -971,20 +971,25 @@ def create_filter_bar():
 
 
 def create_stat_card(icon, value, label, accent=False):
-    """Create a statistics card."""
+    """Create a statistics card with proper structure."""
     class_name = "stat-card accent" if accent else "stat-card"
     return html.Div([
-        html.Div(icon, className="stat-icon"),
-        html.Div(value, className="stat-value"),
-        html.Div(label, className="stat-label"),
+        html.Span(icon, className="stat-icon"),
+        html.Span(str(value), className="stat-value"),
+        html.Span(str(label), className="stat-label"),
     ], className=class_name)
 
 
 def create_card(title, content, icon="", className=""):
-    """Create a content card."""
+    """Create a content card with proper icon and title handling."""
+    title_content = []
+    if icon:
+        title_content.append(html.Span(icon, className="card-icon"))
+    title_content.append(html.Span(title, className="card-title-text"))
+    
     return html.Div([
         html.Div([
-            html.Div([html.Span(icon, className="card-icon"), title], className="card-title"),
+            html.Div(title_content, className="card-title"),
         ], className="card-header"),
         html.Div(content, className="card-body"),
     ], className=f"card {className}")
