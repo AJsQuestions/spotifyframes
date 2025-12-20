@@ -5,6 +5,7 @@ import {
   AreaChart, Area, PieChart, Pie, Cell,
   Legend, CartesianGrid,
 } from 'recharts'
+import { RefreshCw, Database } from 'lucide-react'
 import PageHeader from '../components/PageHeader'
 import Card from '../components/Card'
 import StatCard from '../components/StatCard'
@@ -20,7 +21,27 @@ export default function Dashboard() {
     timelineData,
     popularityDistribution,
     decadeData,
+    isCached,
+    dataSource,
+    refreshData,
+    loadFromBackend,
+    isDataLoading,
   } = useSpotify()
+  
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [isLoadingBackend, setIsLoadingBackend] = useState(false)
+  
+  const handleRefresh = async () => {
+    setIsRefreshing(true)
+    await refreshData()
+    setIsRefreshing(false)
+  }
+  
+  const handleLoadBackend = async () => {
+    setIsLoadingBackend(true)
+    await loadFromBackend()
+    setIsLoadingBackend(false)
+  }
   
   const [selectedGenre, setSelectedGenre] = useState<string>('All')
   const genres = ['All', ...genreData.map(g => g.name)]
@@ -68,8 +89,43 @@ export default function Dashboard() {
               <option key={genre} value={genre}>{genre}</option>
             ))}
           </select>
-          <div className="ml-auto text-sm font-mono text-neon-cyan">
-            {libraryData.totalTracks.toLocaleString()} tracks
+          <div className="ml-auto flex items-center gap-4">
+            {dataSource && (
+              <span className={`text-xs px-2 py-1 rounded ${
+                dataSource === 'local' ? 'text-emerald-400 bg-emerald-400/10' :
+                dataSource === 'cache' ? 'text-amber-400 bg-amber-400/10' :
+                'text-blue-400 bg-blue-400/10'
+              }`}>
+                {dataSource === 'local' ? '📁 Local Backend' :
+                 dataSource === 'cache' ? '📦 Cached' :
+                 '🌐 API'}
+              </span>
+            )}
+            <span className="text-sm font-mono text-neon-cyan">
+              {libraryData.totalTracks.toLocaleString()} tracks
+            </span>
+            {import.meta.env.DEV && (
+              <>
+                <button
+                  onClick={handleLoadBackend}
+                  disabled={isLoadingBackend || isDataLoading}
+                  className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/30 rounded-lg transition-colors disabled:opacity-50"
+                  title="Load from local parquet files (python scripts/export_for_web.py)"
+                >
+                  <Database className={`w-3.5 h-3.5 ${isLoadingBackend ? 'animate-pulse' : ''}`} />
+                  Backend
+                </button>
+                <button
+                  onClick={handleRefresh}
+                  disabled={isRefreshing || isDataLoading}
+                  className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium bg-void-500 hover:bg-void-400 border border-border-subtle rounded-lg transition-colors disabled:opacity-50"
+                  title="Clear cache and refresh from Spotify API"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  API
+                </button>
+              </>
+            )}
           </div>
         </motion.div>
 

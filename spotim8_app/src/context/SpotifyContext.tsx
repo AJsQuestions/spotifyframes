@@ -18,6 +18,94 @@ import * as analytics from '../lib/analytics'
 // Set redirect URI to your GitHub Pages URL
 const CLIENT_ID = import.meta.env.VITE_SPOTIFY_CLIENT_ID || ''
 
+// Local caching - ONLY enabled in development mode for faster iteration
+// In production, data is never persisted (privacy-first)
+const DEV_CACHE_ENABLED = import.meta.env.DEV
+const CACHE_KEY = 'spotim8_dev_cache'
+const CACHE_VERSION = 1
+
+interface CachedData {
+  version: number
+  timestamp: number
+  libraryData: analytics.LibraryStats
+  genreData: analytics.GenreData[]
+  topArtists: analytics.ArtistData[]
+  tracks: analytics.TrackData[]
+  timelineData: analytics.TimelineData[]
+  decadeData: { decade: string; tracks: number }[]
+  popularityDistribution: { range: string; count: number }[]
+  playlists: spotify.SpotifyPlaylist[]
+  hiddenGems: analytics.TrackData[]
+}
+
+function saveToCache(data: Omit<CachedData, 'version' | 'timestamp'>): void {
+  if (!DEV_CACHE_ENABLED) return
+  try {
+    const cached: CachedData = {
+      ...data,
+      version: CACHE_VERSION,
+      timestamp: Date.now(),
+    }
+    localStorage.setItem(CACHE_KEY, JSON.stringify(cached))
+    console.log('💾 Dev cache: Data saved to localStorage')
+  } catch (err) {
+    console.warn('Failed to save cache:', err)
+  }
+}
+
+function loadFromCache(): CachedData | null {
+  if (!DEV_CACHE_ENABLED) return null
+  try {
+    const raw = localStorage.getItem(CACHE_KEY)
+    if (!raw) return null
+    const cached: CachedData = JSON.parse(raw)
+    if (cached.version !== CACHE_VERSION) {
+      console.log('💾 Dev cache: Version mismatch, clearing cache')
+      localStorage.removeItem(CACHE_KEY)
+      return null
+    }
+    const ageMinutes = (Date.now() - cached.timestamp) / 1000 / 60
+    console.log(`💾 Dev cache: Found cached data (${ageMinutes.toFixed(1)} min old)`)
+    return cached
+  } catch (err) {
+    console.warn('Failed to load cache:', err)
+    return null
+  }
+}
+
+function clearCache(): void {
+  localStorage.removeItem(CACHE_KEY)
+  console.log('💾 Dev cache: Cleared')
+}
+
+// Local backend data - loads from parquet exports (dev mode only)
+// Run: python scripts/export_for_web.py to generate
+interface LocalLibraryData {
+  playlists: spotify.SpotifyPlaylist[]
+  tracks: spotify.SpotifyTrack[]
+  trackPlaylistMap: Record<string, string[]>
+  artists: Record<string, spotify.SpotifyArtist>
+  exportedAt: string
+}
+
+async function loadLocalBackendData(): Promise<LocalLibraryData | null> {
+  if (!import.meta.env.DEV) return null
+  
+  try {
+    const response = await fetch('/spotim8/dev-data/library.json')
+    if (!response.ok) {
+      console.log('📁 No local backend data found (run: python scripts/export_for_web.py)')
+      return null
+    }
+    const data: LocalLibraryData = await response.json()
+    console.log(`📁 Loaded local backend data (exported: ${data.exportedAt})`)
+    return data
+  } catch (err) {
+    console.log('📁 No local backend data available')
+    return null
+  }
+}
+
 interface SpotifyContextType {
   // Auth state
   isAuthenticated: boolean
@@ -38,10 +126,16 @@ interface SpotifyContextType {
   playlists: spotify.SpotifyPlaylist[]
   hiddenGems: analytics.TrackData[]
   
+  // Cache info (dev only)
+  isCached: boolean
+  dataSource: 'api' | 'cache' | 'local' | null  // Where data came from
+  
   // Actions
   login: () => Promise<void>
   logout: () => void
   loadData: () => Promise<void>
+  refreshData: () => Promise<void>  // Force refresh, ignore cache
+  loadFromBackend: () => Promise<void>  // Load from local parquet exports (dev only)
 }
 
 const SpotifyContext = createContext<SpotifyContextType | null>(null)
@@ -68,6 +162,8 @@ export function SpotifyProvider({ children }: { children: ReactNode }) {
   const [popularityDistribution, setPopularityDistribution] = useState<{ range: string; count: number }[]>([])
   const [playlists, setPlaylists] = useState<spotify.SpotifyPlaylist[]>([])
   const [hiddenGems, setHiddenGems] = useState<analytics.TrackData[]>([])
+  const [isCached, setIsCached] = useState(false)
+  const [dataSource, setDataSource] = useState<'api' | 'cache' | 'local' | null>(null)
   
   // Check auth on mount and handle OAuth callback
   useEffect(() => {
@@ -127,9 +223,30 @@ export function SpotifyProvider({ children }: { children: ReactNode }) {
     setHiddenGems([])
   }, [])
   
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (forceRefresh = false) => {
     if (!isAuthenticated) return
     
+    // Check cache first (dev mode only)
+    if (!forceRefresh && DEV_CACHE_ENABLED) {
+      const cached = loadFromCache()
+      if (cached) {
+        setLibraryData(cached.libraryData)
+        setGenreData(cached.genreData)
+        setTopArtists(cached.topArtists)
+        setTracks(cached.tracks)
+        setTimelineData(cached.timelineData)
+        setDecadeData(cached.decadeData)
+        setPopularityDistribution(cached.popularityDistribution)
+        setPlaylists(cached.playlists)
+        setHiddenGems(cached.hiddenGems)
+        setIsCached(true)
+        setDataSource('cache')
+        return
+      }
+    }
+    
+    setIsCached(false)
+    setDataSource('api')
     setIsDataLoading(true)
     setLoadingProgress({ stage: 'Fetching playlists...', progress: 10 })
     
@@ -143,15 +260,13 @@ export function SpotifyProvider({ children }: { children: ReactNode }) {
       const allTracks = new Map<string, { track: spotify.SpotifyTrack; playlistIds: Set<string> }>()
       const artistIds = new Set<string>()
       
-      // Fetch tracks from each playlist (limit to first 20 playlists for speed)
-      const playlistsToFetch = userPlaylists.slice(0, 20)
-      for (let i = 0; i < playlistsToFetch.length; i++) {
-        const playlist = playlistsToFetch[i]
-        setLoadingProgress({ 
-          stage: `Loading ${playlist.name}...`, 
-          progress: 20 + (i / playlistsToFetch.length) * 40 
-        })
-        
+      // Fetch tracks from playlists in parallel (limit to first 15 playlists, 5 concurrent)
+      const playlistsToFetch = userPlaylists.slice(0, 15)
+      const CONCURRENCY = 5
+      let completed = 0
+      
+      // Process playlists in parallel batches
+      const processPlaylist = async (playlist: spotify.SpotifyPlaylist) => {
         try {
           const trackItems = await spotify.getPlaylistTracks(playlist.id)
           trackItems.forEach((item: spotify.PlaylistTrackItem) => {
@@ -171,6 +286,17 @@ export function SpotifyProvider({ children }: { children: ReactNode }) {
         } catch (err) {
           console.warn(`Failed to load playlist ${playlist.name}:`, err)
         }
+        completed++
+        setLoadingProgress({ 
+          stage: `Loading playlists (${completed}/${playlistsToFetch.length})...`, 
+          progress: 20 + (completed / playlistsToFetch.length) * 40 
+        })
+      }
+      
+      // Process in batches of CONCURRENCY
+      for (let i = 0; i < playlistsToFetch.length; i += CONCURRENCY) {
+        const batch = playlistsToFetch.slice(i, i + CONCURRENCY)
+        await Promise.all(batch.map(processPlaylist))
       }
       
       // Fetch liked songs (limit to 200 for speed)
@@ -217,6 +343,21 @@ export function SpotifyProvider({ children }: { children: ReactNode }) {
       setCachedTrackMap(allTracks)
       
       setLoadingProgress({ stage: 'Done! Loading genres in background...', progress: 100 })
+      
+      // Save to cache (dev mode only)
+      if (DEV_CACHE_ENABLED) {
+        saveToCache({
+          libraryData: processed.stats,
+          genreData: processed.genreData,
+          topArtists: processed.topArtists,
+          tracks: processed.tracks,
+          timelineData: processed.timelineData,
+          decadeData: processed.decadeData,
+          popularityDistribution: processed.popularityDistribution,
+          playlists: userPlaylists,
+          hiddenGems: analytics.findHiddenGems(processed.tracks),
+        })
+      }
     } catch (error) {
       console.error('Failed to load data:', error)
       setLoadingProgress({ stage: 'Error loading data', progress: 0 })
@@ -224,6 +365,76 @@ export function SpotifyProvider({ children }: { children: ReactNode }) {
       setIsDataLoading(false)
     }
   }, [isAuthenticated])
+  
+  // Force refresh data (clears cache and reloads)
+  const refreshData = useCallback(async () => {
+    if (DEV_CACHE_ENABLED) {
+      clearCache()
+    }
+    setDataSource(null)
+    await loadData(true)
+  }, [loadData])
+  
+  // Load from local backend parquet exports (dev only)
+  const loadFromBackend = useCallback(async () => {
+    if (!import.meta.env.DEV) {
+      console.warn('loadFromBackend is only available in development mode')
+      return
+    }
+    
+    setIsDataLoading(true)
+    setLoadingProgress({ stage: 'Loading from local backend...', progress: 10 })
+    
+    try {
+      const localData = await loadLocalBackendData()
+      if (!localData) {
+        setLoadingProgress({ stage: 'No local data found. Run: python scripts/export_for_web.py', progress: 0 })
+        setIsDataLoading(false)
+        return
+      }
+      
+      setLoadingProgress({ stage: 'Processing local data...', progress: 50 })
+      
+      // Build track map from local data
+      const allTracks = new Map<string, { track: spotify.SpotifyTrack; playlistIds: Set<string> }>()
+      const artistGenres = new Map<string, string[]>()
+      
+      // Add artist genres
+      Object.values(localData.artists).forEach((artist) => {
+        artistGenres.set(artist.id, artist.genres)
+      })
+      
+      // Build track map with playlist associations
+      localData.tracks.forEach((track) => {
+        const playlistIds = new Set(localData.trackPlaylistMap[track.id] || [])
+        allTracks.set(track.id, { track, playlistIds })
+      })
+      
+      setLoadingProgress({ stage: 'Generating analytics...', progress: 80 })
+      
+      // Process analytics with full genre data
+      const processed = analytics.processLibraryData(localData.playlists, allTracks, artistGenres)
+      
+      setPlaylists(localData.playlists)
+      setLibraryData(processed.stats)
+      setGenreData(processed.genreData)
+      setTopArtists(processed.topArtists)
+      setTracks(processed.tracks)
+      setTimelineData(processed.timelineData)
+      setDecadeData(processed.decadeData)
+      setPopularityDistribution(processed.popularityDistribution)
+      setHiddenGems(analytics.findHiddenGems(processed.tracks))
+      setDataSource('local')
+      setIsCached(false)
+      
+      setLoadingProgress({ stage: 'Done! Loaded from local backend.', progress: 100 })
+    } catch (error) {
+      console.error('Failed to load from backend:', error)
+      setLoadingProgress({ stage: 'Error loading local data', progress: 0 })
+    } finally {
+      setIsDataLoading(false)
+    }
+  }, [])
   
   // Lazy load genres in background after initial data load
   useEffect(() => {
@@ -282,9 +493,13 @@ export function SpotifyProvider({ children }: { children: ReactNode }) {
       popularityDistribution,
       playlists,
       hiddenGems,
+      isCached,
+      dataSource,
       login,
       logout,
       loadData,
+      refreshData,
+      loadFromBackend,
     }}>
       {children}
     </SpotifyContext.Provider>

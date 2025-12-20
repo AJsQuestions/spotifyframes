@@ -13,6 +13,10 @@ const SPOTIFY_API_BASE = 'https://api.spotify.com/v1'
 // OAuth Configuration
 // For GitHub Pages, use your deployed URL
 const getRedirectUri = () => {
+  // Check for explicit redirect URI in env (for local dev with specific callback)
+  if (import.meta.env.VITE_REDIRECT_URI) {
+    return import.meta.env.VITE_REDIRECT_URI
+  }
   if (typeof window !== 'undefined') {
     const { protocol, host } = window.location
     // Handle both local dev and production
@@ -145,8 +149,14 @@ export async function handleCallback(clientId: string): Promise<boolean> {
     const data = await response.json()
     setAccessToken(data.access_token, data.expires_in)
     
-    // Clean up URL
-    window.history.replaceState({}, document.title, window.location.pathname)
+    // Clean up URL and redirect to main app if on callback path
+    const basePath = import.meta.env.BASE_URL || '/'
+    if (window.location.pathname.includes('/callback')) {
+      // Redirect from /callback to the main app
+      window.location.href = `${window.location.origin}${basePath}`
+    } else {
+      window.history.replaceState({}, document.title, window.location.pathname)
+    }
     
     return true
   } catch (error) {
@@ -179,7 +189,7 @@ async function fetchSpotify<T>(endpoint: string): Promise<T> {
 }
 
 // Fetch all pages of a paginated endpoint
-async function fetchAllPages<T>(endpoint: string, pageLimit = 50, maxItems?: number): Promise<T[]> {
+async function fetchAllPages<T>(endpoint: string, pageLimit = 100, maxItems?: number): Promise<T[]> {
   const items: T[] = []
   let offset = 0
   let hasMore = true
@@ -201,8 +211,8 @@ async function fetchAllPages<T>(endpoint: string, pageLimit = 50, maxItems?: num
       hasMore = false
     }
     
-    // Rate limiting protection (reduced for speed)
-    await new Promise(resolve => setTimeout(resolve, 50))
+    // Minimal delay to avoid rate limiting
+    await new Promise(resolve => setTimeout(resolve, 20))
   }
   
   return maxItems ? items.slice(0, maxItems) : items
