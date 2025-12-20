@@ -27,11 +27,11 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 # ============================================================================
-# CONFIGURATION - Edit these!
+# CONFIGURATION - Set via environment variables
 # ============================================================================
 
-# Configurable via environment variables or edit here
-OWNER_NAME = os.environ.get("PLAYLIST_OWNER_NAME", "AJ")
+# Configurable via environment variables
+OWNER_NAME = os.environ.get("PLAYLIST_OWNER_NAME", "")
 PREFIX = os.environ.get("PLAYLIST_PREFIX", "Finds")
 
 # Templates
@@ -174,7 +174,7 @@ def sync_liked_songs(sf):
     """Sync liked songs from Spotify."""
     log("Syncing liked songs...")
     
-    from spotifyframes import LIKED_SONGS_PLAYLIST_ID
+    from spotim8 import LIKED_SONGS_PLAYLIST_ID
     import pandas as pd
     
     # Load existing data
@@ -206,7 +206,7 @@ def sync_liked_songs(sf):
 def update_monthly_playlists(sf, current_month_only=True):
     """Update monthly playlists."""
     import pandas as pd
-    from spotifyframes import LIKED_SONGS_PLAYLIST_ID
+    from spotim8 import LIKED_SONGS_PLAYLIST_ID
     
     log("Loading data...")
     library = pd.read_parquet(DATA_DIR / "playlist_tracks.parquet")
@@ -366,7 +366,7 @@ def update_master_genre_playlists(sf):
     import pandas as pd
     import ast
     import numpy as np
-    from spotifyframes import LIKED_SONGS_PLAYLIST_ID
+    from spotim8 import LIKED_SONGS_PLAYLIST_ID
     
     log("Updating master genre playlists...")
     
@@ -448,11 +448,11 @@ def main():
     
     # Connect to Spotify
     try:
-        from spotifyframes import SpotifyFrames
-        from spotifyframes.catalog import CacheConfig
+        from spotim8 import Spotim8
+        from spotim8.catalog import CacheConfig
         
         DATA_DIR.mkdir(exist_ok=True)
-        sf = SpotifyFrames.from_env(progress=False, cache=CacheConfig(dir=DATA_DIR))
+        sf = Spotim8.from_env(progress=False, cache=CacheConfig(dir=DATA_DIR))
         log("Connected to Spotify")
     except Exception as e:
         log(f"ERROR: Could not connect to Spotify: {e}")
@@ -486,4 +486,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

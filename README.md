@@ -1,4 +1,4 @@
-# 🎵 AJsSpotim8
+# 🎵 Spotim8
 
 Your **personal Spotify analytics platform** with **automated playlist management**.
 
@@ -7,7 +7,7 @@ Turn your Spotify library into tidy DataFrames, analyze your listening habits, a
 ## ✨ Features
 
 - 📊 **Pandas DataFrames** - Your library as tidy, mergeable tables
-- 📅 **Monthly Playlists** - Auto-create playlists like `AJFindsDec25`
+- 📅 **Monthly Playlists** - Auto-create playlists like `FindsDec25`
 - 🎸 **Genre-Split Playlists** - Separate by HipHop, Dance, Other
 - 🎵 **Master Genre Playlists** - All-time playlists by genre
 - 🤖 **Daily Automation** - GitHub Actions updates playlists automatically
@@ -19,8 +19,8 @@ Turn your Spotify library into tidy DataFrames, analyze your listening habits, a
 
 ```bash
 # Clone the repo
-git clone https://github.com/AJsQuestions/spotiframes.git
-cd spotifyframes
+git clone https://github.com/yourusername/spotim8.git
+cd spotim8
 
 # Install
 pip install -e .
@@ -46,22 +46,19 @@ Creates **monthly and genre playlists** automatically:
 
 ```
 📅 Monthly Playlists:
-   {Owner}{Prefix}{Mon}{Year} → e.g., AJFindsDec25
+   {Owner}{Prefix}{Mon}{Year} → e.g., FindsDec25
 
 🎸 Genre-Split Monthly:
    {Genre}{Prefix}{Mon}{Year} → e.g., HipHopFindsDec25, DanceFindsDec25
 
 🎵 Master Genre Playlists:
-   {Owner}am{Genre} → e.g., AJamHip-Hop, AJamElectronic
+   {Owner}am{Genre} → e.g., amHip-Hop, amElectronic
 ```
 
-**Configuration:**
-```python
-OWNER_NAME = "AJ"
-PREFIX = "Finds"
-MONTHLY_NAME_TEMPLATE = "{owner}{prefix}{mon}{year}"  # → AJFindsDec25
-SPLIT_GENRES = ["HipHop", "Dance", "Other"]
-DRY_RUN = True  # Set False to create playlists
+**Configuration (via environment variables):**
+```bash
+export PLAYLIST_OWNER_NAME=""      # Your prefix (optional)
+export PLAYLIST_PREFIX="Finds"     # Month playlist prefix
 ```
 
 ## 🤖 Daily Automation (GitHub Actions)
@@ -79,7 +76,7 @@ Playlists update automatically every day at 2am UTC.
 | `SPOTIPY_CLIENT_SECRET` | ✅ | Your Spotify app client secret |
 | `SPOTIPY_REDIRECT_URI` | ✅ | `http://127.0.0.1:8888/callback` |
 | `SPOTIPY_REFRESH_TOKEN` | ✅ | Get via `get_refresh_token.py` |
-| `PLAYLIST_OWNER_NAME` | ❌ | Your name for playlists (default: "AJ") |
+| `PLAYLIST_OWNER_NAME` | ❌ | Your name for playlists (default: "") |
 | `PLAYLIST_PREFIX` | ❌ | Prefix like "Finds" (default: "Finds") |
 
 ### Manual trigger:
@@ -103,12 +100,27 @@ python app.py
 - Similar playlist discovery
 - Hidden gems finder
 
+## 🌐 Web App
+
+A modern React-based Spotify analytics dashboard:
+
+```bash
+cd web
+npm install
+npm run dev
+```
+
+**Features:**
+- Privacy-first (all data processed in browser)
+- Interactive charts and visualizations
+- Playlist clusters and hidden gems
+
 ## 🔧 Python API
 
 ```python
-from spotifyframes import SpotifyFrames
+from spotim8 import Spotim8, build_all_features
 
-sf = SpotifyFrames.from_env(progress=True)
+sf = Spotim8.from_env(progress=True)
 
 # Sync your library
 sf.sync(owned_only=True, include_liked_songs=True)
@@ -135,19 +147,19 @@ wide = sf.library_wide()        # Everything joined
 
 ```bash
 # Sync library
-spotifyframes refresh
+spotim8 refresh
 
 # Check status
-spotifyframes status
+spotim8 status
 
 # Export data
-spotifyframes export --table tracks --out tracks.parquet
+spotim8 export --table tracks --out tracks.parquet
 ```
 
 ## 📂 Project Structure
 
 ```
-AJsSpotim8/
+spotim8/
 ├── notebooks/
 │   ├── 01_sync_data.ipynb
 │   ├── 02_analyze_library.ipynb
@@ -157,19 +169,22 @@ AJsSpotim8/
 ├── dashboard/
 │   ├── app.py                    # Dash web app
 │   └── assets/styles.css
+├── web/                          # React web app
+│   ├── src/
+│   └── package.json
 ├── scripts/
 │   ├── daily_update.py           # Local automation
 │   ├── sync_and_update.py        # GitHub Actions script
 │   └── get_refresh_token.py      # Get token for CI/CD
 ├── .github/workflows/
 │   └── daily_update.yml          # GitHub Actions workflow
-├── spotifyframes/                # Core library
+├── spotim8/                      # Core Python library
 └── data/                         # Cached parquet files
 ```
 
 ## 📋 Requirements
 
-- Python 3.9+
+- Python 3.10+
 - Spotify Developer Account
 - Spotify Premium (for some features)
 
@@ -188,4 +203,4 @@ MIT
 
 ---
 
-Made with 🎵 by [AJ](https://github.com/AJsQuestions)
+🎓 **Open Source Academic Project** - Built for learning and personal use.

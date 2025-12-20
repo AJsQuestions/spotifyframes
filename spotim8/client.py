@@ -1,5 +1,5 @@
 """
-SpotifyFrames client - pandas-first interface to Spotify Web API.
+Spotim8 client - pandas-first interface to Spotify Web API.
 """
 
 from __future__ import annotations
@@ -28,7 +28,7 @@ LIKED_SONGS_PLAYLIST_ID = "__liked_songs__"
 LIKED_SONGS_PLAYLIST_NAME = "❤️ Liked Songs"
 
 
-class SpotifyFrames:
+class Spotim8:
     """Pandas-first interface to Spotify Web API (library + market)."""
 
     def __init__(self, sp: spotipy.Spotify, cache: CacheConfig = CacheConfig(), 
@@ -51,7 +51,7 @@ class SpotifyFrames:
         scope: str = DEFAULT_SCOPE,
         cache: CacheConfig = CacheConfig(),
         progress: bool = False,
-    ) -> "SpotifyFrames":
+    ) -> "Spotim8":
         auth = SpotifyOAuth(
             client_id=client_id,
             client_secret=client_secret,
@@ -68,7 +68,7 @@ class SpotifyFrames:
         scope: str = DEFAULT_SCOPE,
         cache: CacheConfig = CacheConfig(),
         progress: bool = False,
-    ) -> "SpotifyFrames":
+    ) -> "Spotim8":
         cid = os.environ.get("SPOTIPY_CLIENT_ID")
         secret = os.environ.get("SPOTIPY_CLIENT_SECRET")
         redir = os.environ.get("SPOTIPY_REDIRECT_URI")
@@ -126,7 +126,7 @@ class SpotifyFrames:
         """Print current state of cached data."""
         s = self.status()
         print("\n" + "="*50)
-        print("        SPOTIFYFRAMES DATA STATUS")
+        print("        SPOTIM8 DATA STATUS")
         print("="*50)
         print(f"📁 Cache directory: {s['cache_dir']}")
         print(f"👤 User: {s['user_id']}")

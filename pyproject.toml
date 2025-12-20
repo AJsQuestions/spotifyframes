@@ -1,5 +1,5 @@
 [project]
-name = "spotifyframes"
+name = "spotim8"
 version = "0.2.0"
 description = "Pandas-first Spotify Web API interface: tidy DataFrames for library + market signals."
 readme = "README.md"
@@ -15,17 +15,17 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["pytest>=8", "ruff>=0.6", "black>=24.0"]
 notebook = ["jupyter>=1.0", "matplotlib>=3.8", "seaborn>=0.13", "plotly>=5.18"]
-all = ["spotifyframes[dev,notebook]"]
+all = ["spotim8[dev,notebook]"]
 
 [project.scripts]
-spotifyframes = "spotifyframes.cli:main"
+spotim8 = "spotim8.cli:main"
 
 [build-system]
 requires = ["setuptools>=69"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
-include = ["spotifyframes*"]
+include = ["spotim8*"]
 
 [tool.ruff]
 line-length = 100

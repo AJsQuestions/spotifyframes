@@ -1,12 +1,12 @@
 """
-SpotifyFrames - Pandas-first interface to Spotify Web API.
+Spotim8 - Pandas-first interface to Spotify Web API.
 
 Turns Spotify into tidy DataFrames you can merge().
 
 Usage:
-    from spotifyframes import SpotifyFrames
+    from spotim8 import Spotim8
     
-    sf = SpotifyFrames.from_env(progress=True)
+    sf = Spotim8.from_env(progress=True)
     sf.sync()
     
     playlists = sf.playlists()
@@ -15,7 +15,7 @@ Usage:
 """
 
 from .client import (
-    SpotifyFrames,
+    Spotim8,
     LIKED_SONGS_PLAYLIST_ID,
     LIKED_SONGS_PLAYLIST_NAME,
     DEFAULT_SCOPE,
@@ -35,7 +35,7 @@ __version__ = "0.2.0"
 
 __all__ = [
     # Main client
-    "SpotifyFrames",
+    "Spotim8",
     # Constants
     "LIKED_SONGS_PLAYLIST_ID",
     "LIKED_SONGS_PLAYLIST_NAME",

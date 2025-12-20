@@ -5,10 +5,10 @@ from pathlib import Path
 import shutil
 import tempfile
 
-from spotifyframes.client import SpotifyFrames
-from spotifyframes.catalog import CacheConfig
+from spotim8.client import Spotim8
+from spotim8.catalog import CacheConfig
 
-class TestSpotifyFrames(unittest.TestCase):
+class TestSpotim8(unittest.TestCase):
     def setUp(self):
         # Create a temporary directory for cache
         self.test_dir = tempfile.mkdtemp()
@@ -16,14 +16,14 @@ class TestSpotifyFrames(unittest.TestCase):
         
         # Mock Spotipy client
         self.mock_sp = MagicMock()
-        self.sf = SpotifyFrames(sp=self.mock_sp, cache=self.cache_config)
+        self.sf = Spotim8(sp=self.mock_sp, cache=self.cache_config)
 
     def tearDown(self):
         # Remove temporary directory
         shutil.rmtree(self.test_dir)
 
     def test_init(self):
-        self.assertIsInstance(self.sf, SpotifyFrames)
+        self.assertIsInstance(self.sf, Spotim8)
         self.assertTrue(self.sf.catalog.cache.enabled)
         self.assertEqual(self.sf.catalog.cache.dir, Path(self.test_dir))
 

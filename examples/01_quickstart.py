@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-SpotifyFrames Quickstart Example
+Spotim8 Quickstart Example
 
 Before running, set environment variables:
     export SPOTIPY_CLIENT_ID="your_client_id"
@@ -8,10 +8,10 @@ Before running, set environment variables:
     export SPOTIPY_REDIRECT_URI="http://127.0.0.1:8888/callback"
 """
 
-from spotifyframes import SpotifyFrames, build_all_features
+from spotim8 import Spotim8, build_all_features
 
 # Initialize client
-sf = SpotifyFrames.from_env(progress=True)
+sf = Spotim8.from_env(progress=True)
 
 # Sync your library (incremental - only fetches changes)
 sf.sync(owned_only=True, include_liked_songs=True)

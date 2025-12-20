@@ -25,11 +25,11 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 # ============================================================================
-# CONFIGURATION
+# CONFIGURATION - Set via environment variables
 # ============================================================================
 
-# Configurable via environment variables or edit here
-OWNER_NAME = os.environ.get("PLAYLIST_OWNER_NAME", "AJ")
+# Configurable via environment variables
+OWNER_NAME = os.environ.get("PLAYLIST_OWNER_NAME", "")
 PREFIX = os.environ.get("PLAYLIST_PREFIX", "Finds")
 
 MONTHLY_NAME_TEMPLATE = "{owner}{prefix}{mon}{year}"
@@ -442,4 +442,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

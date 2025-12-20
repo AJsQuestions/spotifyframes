@@ -1,12 +1,12 @@
 """
-SpotifyFrames CLI - Command line interface for Spotify data operations.
+Spotim8 CLI - Command line interface for Spotify data operations.
 """
 
 from __future__ import annotations
 
 import argparse
 
-from .client import SpotifyFrames
+from .client import Spotim8
 from .export import export_table
 
 
@@ -22,7 +22,7 @@ AVAILABLE_TABLES = [
 
 def main():
     ap = argparse.ArgumentParser(
-        prog="spotifyframes",
+        prog="spotim8",
         description="Spotify -> pandas tables. Export your library as DataFrames.",
     )
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -57,7 +57,7 @@ def main():
     args = ap.parse_args()
 
     # Initialize client
-    sf = SpotifyFrames.from_env(progress=True)
+    sf = Spotim8.from_env(progress=True)
 
     if args.cmd == "refresh":
         sf.sync(force=args.force, owned_only=args.owned_only)
