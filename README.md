@@ -4,8 +4,8 @@ Your **personal Spotify analytics platform** with **automated playlist managemen
 
 Turn your Spotify library into tidy DataFrames, analyze your listening habits, and automatically organize your music into smart playlists.
 
-[![Daily Playlist Update](https://github.com/yourusername/spotim8/actions/workflows/daily_update.yml/badge.svg)](https://github.com/yourusername/spotim8/actions/workflows/daily_update.yml)
-[![Deploy Web App](https://github.com/yourusername/spotim8/actions/workflows/deploy-web.yml/badge.svg)](https://github.com/yourusername/spotim8/actions/workflows/deploy-web.yml)
+[![Daily Playlist Update](https://github.com/AJsQuestions/spotim8/actions/workflows/daily_update.yml/badge.svg)](https://github.com/AJsQuestions/spotim8/actions/workflows/daily_update.yml)
+[![Deploy Web App](https://github.com/AJsQuestions/spotim8/actions/workflows/deploy-web.yml/badge.svg)](https://github.com/AJsQuestions/spotim8/actions/workflows/deploy-web.yml)
 
 ## ✨ Features
 
@@ -22,7 +22,7 @@ Turn your Spotify library into tidy DataFrames, analyze your listening habits, a
 
 ```bash
 # Clone the repo
-git clone https://github.com/yourusername/spotim8.git
+git clone https://github.com/AJsQuestions/spotim8.git
 cd spotim8
 
 # Install

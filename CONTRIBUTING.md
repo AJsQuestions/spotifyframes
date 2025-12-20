@@ -5,7 +5,7 @@ Thank you for your interest in contributing to Spotim8! This document provides g
 ## Getting Started
 
 1. Fork the repository
-2. Clone your fork: `git clone https://github.com/yourusername/spotim8.git`
+2. Clone your fork: `git clone https://github.com/YOUR_USERNAME/spotim8.git`
 3. Install in development mode: `pip install -e ".[dev]"`
 4. Set up your Spotify credentials (see `env.example`)
 

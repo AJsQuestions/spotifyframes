@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import {
   Treemap, ResponsiveContainer, Tooltip, RadarChart,
   PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid,
 } from 'recharts'
 import PageHeader from '../components/PageHeader'
 import Card from '../components/Card'
@@ -22,8 +23,8 @@ const genreColorMap: Record<string, string> = {
 }
 
 export default function Explore() {
-  const { topArtists, playlists, genreData } = useSpotify()
-  const [selectedPlaylist, setSelectedPlaylist] = useState<string>('')
+  const { topArtists, genreData, tracks } = useSpotify()
+  const [selectedGenre, setSelectedGenre] = useState<string>('')
 
   // Build treemap data from artists
   const treemapData = useMemo(() => {
@@ -42,11 +43,42 @@ export default function Explore() {
     return genreData.slice(0, 7).map(g => ({
       genre: g.name,
       library: Math.round((g.value / total) * 100),
-      playlist: selectedPlaylist ? Math.floor(Math.random() * 50) : 0, // Placeholder
     }))
-  }, [genreData, selectedPlaylist])
+  }, [genreData])
 
-  const genreList = ['Hip-Hop', 'R&B/Soul', 'Electronic', 'Rock', 'Pop', 'Indie']
+  // Genre breakdown for bar chart
+  const genreBarData = useMemo(() => {
+    return genreData.slice(0, 8).map(g => ({
+      name: g.name,
+      tracks: g.value,
+      fill: genreColorMap[g.name] || '#666666',
+    }))
+  }, [genreData])
+
+  // Top artists by genre
+  const artistsByGenre = useMemo(() => {
+    if (!selectedGenre) return topArtists.slice(0, 10)
+    return topArtists.filter(a => a.genre === selectedGenre).slice(0, 10)
+  }, [topArtists, selectedGenre])
+
+  // Popularity by genre
+  const popularityByGenre = useMemo(() => {
+    const genreStats: Record<string, { total: number; count: number }> = {}
+    tracks.forEach(track => {
+      if (!genreStats[track.genre]) {
+        genreStats[track.genre] = { total: 0, count: 0 }
+      }
+      genreStats[track.genre].total += track.popularity
+      genreStats[track.genre].count++
+    })
+    return Object.entries(genreStats)
+      .map(([genre, stats]) => ({
+        genre,
+        avgPopularity: Math.round(stats.total / stats.count),
+        fill: genreColorMap[genre] || '#666666',
+      }))
+      .sort((a, b) => b.avgPopularity - a.avgPopularity)
+  }, [tracks])
 
   const CustomTooltip = ({ active, payload }: any) => {
     if (!active || !payload?.length) return null
@@ -58,6 +90,16 @@ export default function Explore() {
         {data.popularity && (
           <p className="text-xs text-text-muted">Avg Popularity: {data.popularity}</p>
         )}
+      </div>
+    )
+  }
+
+  const BarTooltip = ({ active, payload, label }: any) => {
+    if (!active || !payload?.length) return null
+    return (
+      <div className="bg-void-200 border border-border-subtle rounded-lg px-4 py-3 shadow-lg">
+        <p className="text-text-primary font-medium">{label}</p>
+        <p className="text-sm text-neon-cyan">{payload[0].value} tracks</p>
       </div>
     )
   }
@@ -84,68 +126,32 @@ export default function Explore() {
         </Card>
 
         <div className="grid grid-cols-2 gap-6">
-          {/* Playlist DNA Heatmap */}
-          <Card title="Playlist DNA" icon="🧬" hint="Genre composition across playlists" delay={0.2}>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr>
-                    <th className="text-left text-xs font-semibold text-text-muted uppercase tracking-wider p-3"></th>
-                    {genreList.slice(0, 5).map(genre => (
-                      <th key={genre} className="text-center text-xs font-semibold text-text-muted uppercase tracking-wider p-2">
-                        {genre.split('/')[0].substring(0, 6)}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {playlists.slice(0, 8).map((playlist) => (
-                    <tr key={playlist.id} className="border-t border-border-subtle">
-                      <td className="text-sm text-text-primary p-3 max-w-[150px] truncate">
-                        {playlist.name.length > 20 ? playlist.name.substring(0, 20) + '...' : playlist.name}
-                      </td>
-                      {genreList.slice(0, 5).map((genre, gi) => {
-                        const value = Math.floor(Math.random() * 50 + (gi === 0 ? 20 : 0)) // Placeholder
-                        const intensity = value / 60
-                        return (
-                          <td key={genre} className="p-1">
-                            <div 
-                              className="w-full h-8 rounded flex items-center justify-center text-xs font-mono"
-                              style={{
-                                backgroundColor: `rgba(0, 255, 204, ${intensity})`,
-                                color: intensity > 0.5 ? '#050508' : '#a0a0b0',
-                              }}
-                            >
-                              {value > 0 ? `${value}%` : '-'}
-                            </div>
-                          </td>
-                        )
-                      })}
-                    </tr>
+          {/* Genre Breakdown */}
+          <Card title="Genre Distribution" icon="🎸" hint="Track count by genre" delay={0.2}>
+            <ResponsiveContainer width="100%" height={350}>
+              <BarChart data={genreBarData} layout="vertical" margin={{ left: 10, right: 30 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1a1a25" horizontal={false} />
+                <XAxis type="number" stroke="#606070" tick={{ fill: '#a0a0b0', fontSize: 12 }} />
+                <YAxis 
+                  dataKey="name" 
+                  type="category" 
+                  width={90} 
+                  stroke="#606070" 
+                  tick={{ fill: '#f0f0f5', fontSize: 12 }}
+                />
+                <Tooltip content={<BarTooltip />} />
+                <Bar dataKey="tracks" radius={[0, 4, 4, 0]}>
+                  {genreBarData.map((entry, index) => (
+                    <rect key={index} fill={entry.fill} />
                   ))}
-                </tbody>
-              </table>
-            </div>
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
           </Card>
 
           {/* Taste Profile Radar */}
           <Card title="Your Taste Profile" icon="🎯" delay={0.3}>
-            <div className="mb-4">
-              <label className="text-xs font-semibold text-text-muted uppercase tracking-wider block mb-2">
-                Compare with playlist:
-              </label>
-              <select
-                value={selectedPlaylist}
-                onChange={(e) => setSelectedPlaylist(e.target.value)}
-                className="w-full bg-void-500 border border-border rounded-lg px-4 py-2.5 text-sm text-text-primary focus:outline-none focus:border-neon-cyan"
-              >
-                <option value="">Select a playlist...</option>
-                {playlists.map(p => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
-            </div>
-            <ResponsiveContainer width="100%" height={320}>
+            <ResponsiveContainer width="100%" height={350}>
               <RadarChart data={radarData}>
                 <PolarGrid stroke="#1a1a25" />
                 <PolarAngleAxis 
@@ -164,20 +170,90 @@ export default function Explore() {
                   fill="#00ffcc"
                   fillOpacity={0.3}
                 />
-                {selectedPlaylist && (
-                  <Radar
-                    name="Selected Playlist"
-                    dataKey="playlist"
-                    stroke="#ff00aa"
-                    fill="#ff00aa"
-                    fillOpacity={0.3}
-                  />
-                )}
                 <Legend 
                   wrapperStyle={{ paddingTop: 10 }}
                   formatter={(value) => <span className="text-text-secondary text-sm">{value}</span>}
                 />
               </RadarChart>
+            </ResponsiveContainer>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-2 gap-6">
+          {/* Top Artists by Genre */}
+          <Card title="Top Artists" icon="🎤" delay={0.4}>
+            <div className="mb-4">
+              <label className="text-xs font-semibold text-text-muted uppercase tracking-wider block mb-2">
+                Filter by genre:
+              </label>
+              <select
+                value={selectedGenre}
+                onChange={(e) => setSelectedGenre(e.target.value)}
+                className="w-full bg-void-500 border border-border rounded-lg px-4 py-2.5 text-sm text-text-primary focus:outline-none focus:border-neon-cyan"
+              >
+                <option value="">All Genres</option>
+                {genreData.map(g => (
+                  <option key={g.name} value={g.name}>{g.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2 max-h-[280px] overflow-y-auto">
+              {artistsByGenre.map((artist, i) => (
+                <div 
+                  key={artist.name}
+                  className="flex items-center justify-between p-3 rounded-lg bg-void-500/50 hover:bg-void-400 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-text-muted font-mono text-sm w-6">{i + 1}</span>
+                    <div>
+                      <p className="text-text-primary font-medium">{artist.name}</p>
+                      <p className="text-xs text-text-muted">{artist.genre}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-neon-cyan font-mono">{artist.trackCount}</p>
+                    <p className="text-xs text-text-muted">tracks</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+
+          {/* Average Popularity by Genre */}
+          <Card title="Popularity by Genre" icon="📊" hint="Average track popularity" delay={0.5}>
+            <ResponsiveContainer width="100%" height={350}>
+              <BarChart data={popularityByGenre} margin={{ top: 10, right: 30, left: 10, bottom: 40 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1a1a25" vertical={false} />
+                <XAxis 
+                  dataKey="genre" 
+                  stroke="#606070" 
+                  tick={{ fill: '#a0a0b0', fontSize: 10 }}
+                  angle={-45}
+                  textAnchor="end"
+                  height={60}
+                />
+                <YAxis 
+                  domain={[0, 100]}
+                  stroke="#606070" 
+                  tick={{ fill: '#a0a0b0', fontSize: 12 }} 
+                />
+                <Tooltip 
+                  content={({ active, payload, label }) => {
+                    if (!active || !payload?.length) return null
+                    return (
+                      <div className="bg-void-200 border border-border-subtle rounded-lg px-4 py-3 shadow-lg">
+                        <p className="text-text-primary font-medium">{label}</p>
+                        <p className="text-sm text-neon-cyan">Avg: {payload[0].value}</p>
+                      </div>
+                    )
+                  }}
+                />
+                <Bar dataKey="avgPopularity" radius={[4, 4, 0, 0]}>
+                  {popularityByGenre.map((entry, index) => (
+                    <rect key={index} fill={entry.fill} />
+                  ))}
+                </Bar>
+              </BarChart>
             </ResponsiveContainer>
           </Card>
         </div>

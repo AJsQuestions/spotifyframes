@@ -43,7 +43,7 @@ Want to host your own instance?
 ### 1. Create a Spotify App
 1. Go to [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
 2. Create a new app
-3. Set **Redirect URI** to your GitHub Pages URL (e.g., `https://yourusername.github.io/your-repo/`)
+3. Set **Redirect URI** to your GitHub Pages URL (e.g., `https://YOUR_USERNAME.github.io/spotim8/`)
 4. Copy your **Client ID**
 
 ### 2. Fork & Configure
