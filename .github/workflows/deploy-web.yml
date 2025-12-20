@@ -1,5 +1,5 @@
 # Deploy Spotim8 Web App to GitHub Pages
-# Secrets required: VITE_SPOTIFY_CLIENT_ID (your Spotify app client ID)
+# Uses existing SPOTIPY_CLIENT_ID secret
 
 name: Deploy Web App
 
@@ -41,7 +41,7 @@ jobs:
         working-directory: ./web
         run: npm run build
         env:
-          VITE_SPOTIFY_CLIENT_ID: ${{ secrets.VITE_SPOTIFY_CLIENT_ID }}
+          VITE_SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIPY_CLIENT_ID }}
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
