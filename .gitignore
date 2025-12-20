@@ -11,6 +11,7 @@ downloads/
 eggs/
 .eggs/
 lib/
+!spotim8_app/src/lib/
 lib64/
 parts/
 sdist/
