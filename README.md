@@ -13,7 +13,7 @@ Turn your Spotify library into tidy DataFrames, analyze your listening habits, a
 - 🤖 **Daily Automation** - GitHub Actions updates playlists automatically
 - 💾 **Local Cache** - Parquet files for fast offline access
 - 🔄 **No Duplicates** - Smart deduplication on every run
-- 🎯 **Interactive Dashboard** - Beautiful web UI for analysis
+- 🌐 **Web Dashboard** - Beautiful React UI for analysis
 
 ## 🚀 Quick Start
 
@@ -82,24 +82,6 @@ Playlists update automatically every day at 2am UTC.
 ### Manual trigger:
 Actions → Daily Spotify Playlist Update → Run workflow
 
-## 📊 Dashboard
-
-A beautiful Dash web app for interactive analysis:
-
-```bash
-cd dashboard
-pip install -r requirements.txt
-python app.py
-# Open http://127.0.0.1:8050
-```
-
-**Features:**
-- Library overview with stats
-- Artist and genre analysis
-- Playlist clustering
-- Similar playlist discovery
-- Hidden gems finder
-
 ## 🌐 Web App
 
 A modern React-based Spotify analytics dashboard:
@@ -114,6 +96,8 @@ npm run dev
 - Privacy-first (all data processed in browser)
 - Interactive charts and visualizations
 - Playlist clusters and hidden gems
+- Genre breakdown and artist treemaps
+- Release timeline analysis
 
 ## 🔧 Python API
 
@@ -166,9 +150,6 @@ spotim8/
 │   ├── 03_playlist_analysis.ipynb
 │   ├── 04_liked_songs_monthly_playlists.ipynb
 │   └── lib.py                    # Shared utilities
-├── dashboard/
-│   ├── app.py                    # Dash web app
-│   └── assets/styles.css
 ├── web/                          # React web app
 │   ├── src/
 │   └── package.json
