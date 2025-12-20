@@ -21,7 +21,6 @@ export default function Dashboard() {
     timelineData,
     popularityDistribution,
     decadeData,
-    isCached,
     dataSource,
     refreshData,
     loadFromBackend,
