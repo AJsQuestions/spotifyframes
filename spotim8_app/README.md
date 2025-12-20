@@ -6,7 +6,7 @@ A modern, privacy-first Spotify analytics dashboard. **Anyone** can login with t
 
 ## 🌐 Live Demo
 
-**https://ajsquestions.github.io/spotim8/**
+Deploy your own instance using the self-hosting instructions below, or run locally for development.
 
 ## ✨ How It Works
 
