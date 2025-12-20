@@ -13,7 +13,7 @@ Turn your Spotify library into tidy DataFrames, analyze your listening habits, a
 - 🤖 **Daily Automation** - GitHub Actions updates playlists automatically
 - 💾 **Local Cache** - Parquet files for fast offline access
 - 🔄 **No Duplicates** - Smart deduplication on every run
-- 🌐 **Web Dashboard** - Beautiful React UI for analysis
+- 🌐 **[Web Dashboard](https://ajsquestions.github.io/spotiframes/)** - Beautiful React UI for analysis
 
 ## 🚀 Quick Start
 

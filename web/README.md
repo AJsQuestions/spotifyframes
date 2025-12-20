@@ -1,108 +1,90 @@
 # 🎵 Spotim8 Web
 
-A modern, privacy-first Spotify analytics dashboard. Login with your Spotify account to visualize your music library with interactive charts and discover insights about your listening habits.
+A modern, privacy-first Spotify analytics dashboard. **Anyone** can login with their Spotify account to visualize their music library.
 
 **🔒 Privacy First:** All data is processed entirely in your browser. Nothing is ever stored or sent to any server.
 
+## 🌐 Live Demo
+
+**https://ajsquestions.github.io/spotiframes/**
+
+## ✨ How It Works
+
+1. Click "Connect with Spotify"
+2. Authorize with your Spotify account
+3. Your library is analyzed **entirely in your browser**
+4. Close the tab → all data is gone (nothing stored)
+
 ## 🔐 Privacy & Security
 
-This is an **open-source academic project** with a strict privacy-first approach:
+- ✅ **No server** - Purely static site, no backend
+- ✅ **No database** - Nothing is ever stored
+- ✅ **No tracking** - No cookies, no analytics
+- ✅ **Session only** - Data cleared when you close the tab
+- ✅ **Open source** - Code is fully auditable
+- ✅ **PKCE OAuth** - Secure authentication without secrets
 
-- ✅ **No server-side storage** - All data processing happens in your browser
-- ✅ **No cookies or tracking** - We don't track your usage in any way
-- ✅ **Session-only data** - Close the tab and all data is immediately cleared
-- ✅ **No backend** - This is a purely static, client-side application
-- ✅ **Open source** - The code is fully transparent and auditable
-- ✅ **No commercial purpose** - Built for learning and personal use only
-
-Your Spotify credentials are handled directly by Spotify's OAuth system. We never see or store your password.
+Your Spotify password is handled directly by Spotify. We never see it.
 
 ## ✨ Features
 
-- **📊 Interactive Dashboard** - Stats at a glance with beautiful visualizations
-- **🎤 Top Artists** - See your most-featured artists
-- **🎸 Genre Breakdown** - Pie chart showing your genre distribution
-- **📈 Timeline** - Stacked area chart showing when your music was released
-- **🌳 Artist Treemap** - Visual landscape of your top artists
-- **🗺️ Playlist Clusters** - Similarity visualization of your playlists
-- **💎 Hidden Gems** - Discover underrated tracks in your library
-- **🎯 Taste Profile** - Radar charts showing your genre preferences
+- 📊 **Dashboard** - Library stats at a glance
+- 🎤 **Top Artists** - Artist treemap visualization
+- 🎸 **Genre Breakdown** - Pie chart of your genres
+- 📈 **Timeline** - When your music was released
+- 🗺️ **Playlist Clusters** - Similarity visualization
+- 💎 **Hidden Gems** - Discover underrated tracks
+- 🎯 **Taste Profile** - Radar charts of preferences
 
-## 🚀 Tech Stack
+## 🛠️ Self-Hosting
 
-- **React 18** with TypeScript
-- **Vite** - Lightning-fast build tool
-- **Tailwind CSS** - Utility-first styling with custom cyberpunk theme
-- **Recharts** - Composable charting library
-- **Framer Motion** - Smooth animations
-- **Spotify Web API** with PKCE OAuth (no backend required)
-
-## 🛠️ Setup
+Want to host your own instance?
 
 ### 1. Create a Spotify App
-
 1. Go to [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
 2. Create a new app
-3. Add your redirect URI (your GitHub Pages URL)
+3. Set **Redirect URI** to your GitHub Pages URL (e.g., `https://yourusername.github.io/your-repo/`)
 4. Copy your **Client ID**
 
-### 2. Configure GitHub Secrets
+### 2. Fork & Configure
+1. Fork this repo
+2. Go to Settings → Secrets → Actions
+3. Add secret: `SPOTIPY_CLIENT_ID` = your Client ID
 
-Add your Spotify Client ID as a GitHub repository secret:
-1. Go to your repo → Settings → Secrets and variables → Actions
-2. Click "New repository secret"
-3. Name: `VITE_SPOTIFY_CLIENT_ID`
-4. Value: Your Spotify App Client ID
+### 3. Enable GitHub Pages
+1. Settings → Pages → Source: **GitHub Actions**
+2. Push any change to trigger deploy
 
-### 3. Local Development
+### 4. Allow Users (Development Mode)
+By default, Spotify apps are in "Development Mode" which allows up to **25 users**. To allow more:
+1. Go to your app in Spotify Dashboard
+2. Click "Request Extension" for Extended Quota
+3. Fill out the form (takes ~1 week to approve)
+
+## 🖥️ Local Development
 
 ```bash
-# Clone the repository
-git clone <your-repo-url>
-cd spotim8/web
+cd web
 
-# Create local environment file
-echo "VITE_SPOTIFY_CLIENT_ID=your_client_id_here" > .env
+# Create .env file
+echo "VITE_SPOTIFY_CLIENT_ID=your_client_id" > .env
 
-# Install dependencies
+# Install & run
 npm install
-
-# Start development server
 npm run dev
 ```
 
-## 🌐 Deployment
+Add `http://localhost:5173/spotiframes/` as a Redirect URI in your Spotify app.
 
-The site auto-deploys to GitHub Pages when you push to `main`. Make sure:
+## 🚀 Tech Stack
 
-1. GitHub Pages is enabled (Settings → Pages → Source: GitHub Actions)
-2. `VITE_SPOTIFY_CLIENT_ID` secret is set
-3. Redirect URI in Spotify app matches your GitHub Pages URL
+- **React 18** + TypeScript
+- **Vite** - Fast builds
+- **Tailwind CSS** - Styling
+- **Recharts** - Charts
+- **Framer Motion** - Animations
+- **Spotify PKCE OAuth** - No backend needed
 
-## 📂 Project Structure
+## 📄 License
 
-```
-src/
-├── components/        # Reusable UI components
-├── context/          # React context (auth & data state)
-├── lib/              # Spotify API & analytics utilities
-├── pages/            # Page components
-├── App.tsx           # Main app with routing
-├── main.tsx          # Entry point
-└── index.css         # Global styles
-```
-
-## 🔧 How It Works
-
-1. **OAuth with PKCE** - Secure authentication without a backend server
-2. **Client-side API calls** - Fetches data directly from Spotify API
-3. **In-memory processing** - All analytics computed in the browser
-4. **Session storage** - Auth tokens stored only in sessionStorage (cleared on tab close)
-
-## 📜 License
-
-MIT License - feel free to use this for your own projects!
-
-## 🎓 Academic Project
-
-This is an open-source academic project built for learning and personal use. It has no commercial purpose and does not collect any user data.
+MIT - Use freely for your own projects!
