@@ -4,7 +4,7 @@ Your **personal Spotify analytics platform** with **automated playlist managemen
 
 Turn your Spotify library into tidy DataFrames, analyze your listening habits, and automatically organize your music into smart playlists.
 
-[![Daily Playlist Update](https://github.com/AJsQuestions/spotim8/actions/workflows/daily_update.yml/badge.svg)](https://github.com/AJsQuestions/spotim8/actions/workflows/daily_update.yml)
+[![Spotify Sync](https://github.com/AJsQuestions/spotim8/actions/workflows/spotify_sync.yml/badge.svg)](https://github.com/AJsQuestions/spotim8/actions/workflows/spotify_sync.yml)
 [![Deploy Web App](https://github.com/AJsQuestions/spotim8/actions/workflows/deploy-web.yml/badge.svg)](https://github.com/AJsQuestions/spotim8/actions/workflows/deploy-web.yml)
 
 ## ✨ Features
@@ -102,7 +102,7 @@ Playlists update automatically every day at 6am PT (14:00 UTC).
 
 ### Manual trigger:
 
-Actions → Daily Spotify Playlist Update → Run workflow
+Actions → Spotify Sync → Run workflow
 
 ## 🌐 Web App
 
@@ -174,7 +174,7 @@ spotim8/
 │   ├── get_refresh_token.py      # Get token for CI/CD
 │   └── export_for_web.py         # Export data for web app
 ├── .github/workflows/
-│   ├── daily_update.yml          # Daily playlist sync
+│   ├── spotify_sync.yml          # Daily sync & playlist update
 │   └── deploy-web.yml            # Web app deployment
 ├── examples/
 │   └── 01_quickstart.py          # Quick start example

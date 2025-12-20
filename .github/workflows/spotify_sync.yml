@@ -1,4 +1,4 @@
-name: Daily Spotify Playlist Update
+name: Spotify Sync
 
 on:
   # Run daily at 6am PT (14:00 UTC)
@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  update-playlists:
+  sync-and-update:
     runs-on: ubuntu-latest
     
     steps:
@@ -27,7 +27,7 @@ jobs:
           pip install pandas pyarrow spotipy tqdm python-dotenv
           pip install -e .
       
-      - name: Download cached data
+      - name: Restore cached data
         uses: actions/cache@v4
         with:
           path: data/
@@ -35,7 +35,7 @@ jobs:
           restore-keys: |
             spotify-data-
       
-      - name: Sync Spotify data and update playlists
+      - name: Sync library and update playlists
         env:
           # Required secrets
           SPOTIPY_CLIENT_ID: ${{ secrets.SPOTIPY_CLIENT_ID }}
