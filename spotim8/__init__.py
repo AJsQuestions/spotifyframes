@@ -31,6 +31,14 @@ from .features import (
     popularity_tier_features,
     build_all_features,
 )
+from .genres import (
+    GENRE_SPLIT_RULES,
+    SPLIT_GENRES,
+    GENRE_RULES,
+    ALL_BROAD_GENRES,
+    get_split_genre,
+    get_broad_genre,
+)
 
 __version__ = "1.0.0"
 
@@ -54,4 +62,11 @@ __all__ = [
     "release_year_features",
     "popularity_tier_features",
     "build_all_features",
+    # Genre classification
+    "GENRE_SPLIT_RULES",
+    "SPLIT_GENRES",
+    "GENRE_RULES",
+    "ALL_BROAD_GENRES",
+    "get_split_genre",
+    "get_broad_genre",
 ]

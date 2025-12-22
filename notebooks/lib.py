@@ -5,11 +5,26 @@ This module provides the LibraryAnalyzer class for modular data filtering.
 """
 
 import re
+import sys
 import pandas as pd
 import numpy as np
 from pathlib import Path
 from collections import Counter
 from typing import Optional, List, Set, Dict
+
+# Add parent directory to path to import spotim8
+_parent = Path(__file__).resolve().parent.parent
+if str(_parent) not in sys.path:
+    sys.path.insert(0, str(_parent))
+
+# Import exhaustive genre rules from spotim8
+from spotim8.genres import (
+    GENRE_SPLIT_RULES,
+    SPLIT_GENRES,
+    GENRE_RULES,
+    get_split_genre,
+    get_broad_genre,
+)
 
 
 class LibraryAnalyzer:
@@ -230,33 +245,12 @@ def build_playlist_genre_profiles(
 def canonical_core_genre(genres: List[str]) -> Optional[str]:
     """Map a list of specific genres to a broad category.
     
+    Uses exhaustive genre rules from spotim8.genres module.
+    
     Returns one of: Hip-Hop, R&B/Soul, Electronic, Rock, Pop, Indie,
-    Latin, World, Jazz, Classical, Country/Folk, Metal, or None.
+    Latin, World, Jazz, Classical, Country/Folk, Metal, Blues, or None.
     """
-    if not genres:
-        return None
-    g = " ".join(genres).lower()
-    rules = [
-        ("hip hop", "Hip-Hop"), ("rap", "Hip-Hop"), ("trap", "Hip-Hop"), 
-        ("drill", "Hip-Hop"), ("grime", "Hip-Hop"), ("phonk", "Hip-Hop"),
-        ("r&b", "R&B/Soul"), ("soul", "R&B/Soul"), ("funk", "R&B/Soul"), ("disco", "R&B/Soul"),
-        ("electronic", "Electronic"), ("edm", "Electronic"), ("house", "Electronic"), 
-        ("techno", "Electronic"), ("dubstep", "Electronic"), ("ambient", "Electronic"),
-        ("rock", "Rock"), ("alternative rock", "Rock"), ("punk", "Rock"), 
-        ("grunge", "Rock"), ("indie rock", "Rock"),
-        ("pop", "Pop"), ("synth-pop", "Pop"), ("dance-pop", "Pop"),
-        ("indie", "Indie"), ("lo-fi", "Indie"), ("dream pop", "Indie"),
-        ("latin", "Latin"), ("reggaeton", "Latin"), ("salsa", "Latin"), ("bachata", "Latin"),
-        ("k-pop", "World"), ("afrobeats", "World"), ("reggae", "World"), ("dancehall", "World"),
-        ("jazz", "Jazz"), ("blues", "Jazz"),
-        ("classical", "Classical"), ("orchestra", "Classical"),
-        ("country", "Country/Folk"), ("folk", "Country/Folk"), ("americana", "Country/Folk"),
-        ("metal", "Metal"), ("death metal", "Metal"), ("thrash metal", "Metal"), ("metalcore", "Metal"),
-    ]
-    for key, label in rules:
-        if key in g:
-            return label
-    return None
+    return get_broad_genre(genres)
 
 
 class PlaylistSimilarityEngine:

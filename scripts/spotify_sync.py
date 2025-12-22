@@ -22,7 +22,7 @@ Environment Variables:
     Optional:
         SPOTIPY_REDIRECT_URI    - Redirect URI (default: http://127.0.0.1:8888/callback)
         SPOTIPY_REFRESH_TOKEN   - Refresh token for headless/CI auth
-        PLAYLIST_OWNER_NAME     - Prefix for playlist names (default: "")
+        PLAYLIST_OWNER_NAME     - Prefix for playlist names (default: "AJ")
         PLAYLIST_PREFIX         - Month playlist prefix (default: "Finds")
 
 Run via cron or GitHub Actions:
@@ -56,21 +56,24 @@ try:
 except ImportError:
     SPOTIM8_AVAILABLE = False
 
+# Import exhaustive genre rules from shared module
+from spotim8.genres import (
+    GENRE_SPLIT_RULES, SPLIT_GENRES, GENRE_RULES,
+    get_split_genre, get_broad_genre
+)
+
 
 # ============================================================================
 # CONFIGURATION - Set via environment variables
 # ============================================================================
 
-OWNER_NAME = os.environ.get("PLAYLIST_OWNER_NAME", "")
+OWNER_NAME = os.environ.get("PLAYLIST_OWNER_NAME", "AJ")
 PREFIX = os.environ.get("PLAYLIST_PREFIX", "Finds")
 
 # Playlist naming templates
 MONTHLY_NAME_TEMPLATE = "{owner}{prefix}{mon}{year}"
 GENRE_MONTHLY_TEMPLATE = "{genre}{prefix}{mon}{year}"
 GENRE_NAME_TEMPLATE = "{owner}am{genre}"
-
-# Genre categories for split playlists
-SPLIT_GENRES = ["HipHop", "Dance", "Other"]
 
 # Master genre playlist limits
 MIN_TRACKS_FOR_GENRE = 20
@@ -87,36 +90,12 @@ MONTH_NAMES = {
     "09": "Sep", "10": "Oct", "11": "Nov", "12": "Dec"
 }
 
-# Genre classification rules for split playlists (HipHop/Dance/Other)
-GENRE_SPLIT_RULES = {
-    "HipHop": [
-        "hip hop", "rap", "trap", "drill", "grime", "crunk", "phonk",
-        "boom bap", "dirty south", "gangsta", "uk drill", "melodic rap",
-        "conscious hip hop", "underground hip hop", "southern hip hop"
-    ],
-    "Dance": [
-        "electronic", "edm", "house", "techno", "trance", "dubstep",
-        "drum and bass", "ambient", "garage", "deep house", "minimal",
-        "synthwave", "future bass", "electro", "dance", "electronica",
-        "uk garage", "breakbeat", "hardstyle", "progressive house"
-    ]
-}
-
-# Broad genre classification for master playlists
-GENRE_RULES = [
-    (["hip hop", "rap", "trap", "drill", "grime", "crunk", "boom bap", "dirty south", "phonk"], "Hip-Hop"),
-    (["r&b", "rnb", "soul", "neo soul", "funk", "motown", "disco"], "R&B/Soul"),
-    (["electronic", "edm", "house", "techno", "trance", "dubstep", "drum and bass", "ambient"], "Electronic"),
-    (["rock", "alternative", "grunge", "punk", "emo", "post-punk", "shoegaze"], "Rock"),
-    (["metal", "heavy metal", "death metal", "black metal", "thrash"], "Metal"),
-    (["indie", "indie rock", "indie pop", "lo-fi", "dream pop"], "Indie"),
-    (["pop", "dance pop", "synth pop", "electropop"], "Pop"),
-    (["latin", "reggaeton", "salsa", "bachata", "cumbia"], "Latin"),
-    (["afrobeat", "k-pop", "reggae", "dancehall", "world"], "World"),
-    (["jazz", "smooth jazz", "bebop", "swing"], "Jazz"),
-    (["classical", "orchestra", "symphony", "opera"], "Classical"),
-    (["country", "folk", "americana", "bluegrass"], "Country/Folk"),
-]
+# Genre rules imported from spotim8.genres module (exhaustive list)
+# See spotim8/genres.py for the full definitions of:
+# - GENRE_SPLIT_RULES (HipHop, Dance keywords)
+# - SPLIT_GENRES (["HipHop", "Dance", "Other"])
+# - GENRE_RULES (broad category mappings)
+# - get_split_genre() and get_broad_genre() functions
 
 
 # ============================================================================
@@ -197,28 +176,6 @@ def _parse_genres(genre_data) -> list:
         except (ValueError, SyntaxError):
             return [genre_data]
     return []
-
-
-def get_split_genre(genre_list: list) -> str:
-    """Map genres to HipHop, Dance, or Other."""
-    if not genre_list:
-        return "Other"
-    combined = " ".join(genre_list).lower()
-    for genre_name, keywords in GENRE_SPLIT_RULES.items():
-        if any(kw in combined for kw in keywords):
-            return genre_name
-    return "Other"
-
-
-def get_broad_genre(genre_list: list) -> str | None:
-    """Map genres to broad category for master playlists."""
-    if not genre_list:
-        return None
-    combined = " ".join(genre_list).lower()
-    for keywords, category in GENRE_RULES:
-        if any(kw in combined for kw in keywords):
-            return category
-    return None
 
 
 def format_playlist_name(template: str, month_str: str, genre: str = None) -> str:
