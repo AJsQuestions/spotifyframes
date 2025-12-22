@@ -121,6 +121,8 @@ def api_call(fn, *args, max_retries: int = 6, backoff_factor: float = 1.0, **kwa
     `fn` should be a callable (typically a bound method on a `spotipy.Spotify` client).
     The helper inspects exception attributes for 429/retry-after and uses exponential backoff.
     """
+    global _RATE_BACKOFF_MULTIPLIER
+
     for attempt in range(max_retries):
         try:
             result = fn(*args, **kwargs)
@@ -135,7 +137,6 @@ def api_call(fn, *args, max_retries: int = 6, backoff_factor: float = 1.0, **kwa
                 time.sleep(delay)
             # Decay multiplier slowly towards 1.0 on success
             try:
-                global _RATE_BACKOFF_MULTIPLIER
                 _RATE_BACKOFF_MULTIPLIER = max(1.0, _RATE_BACKOFF_MULTIPLIER * 0.90)
             except Exception:
                 pass
@@ -172,7 +173,6 @@ def api_call(fn, *args, max_retries: int = 6, backoff_factor: float = 1.0, **kwa
                 time.sleep(wait)
                 # Increase adaptive multiplier to throttle further successful calls
                 try:
-                    global _RATE_BACKOFF_MULTIPLIER
                     _RATE_BACKOFF_MULTIPLIER = min(_RATE_BACKOFF_MAX, _RATE_BACKOFF_MULTIPLIER * 2.0)
                 except Exception:
                     pass
