@@ -10,6 +10,7 @@ dependencies = [
   "pyarrow>=14; platform_system != 'Windows'",
   "tqdm>=4.66",
   "requests>=2.31",
+  "python-dotenv>=1.0",
 ]
 
 [project.optional-dependencies]

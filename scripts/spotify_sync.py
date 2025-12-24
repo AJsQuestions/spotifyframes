@@ -30,7 +30,7 @@ Run locally or via cron:
     python scripts/spotify_sync.py
     
     # Linux/Mac cron (every day at 2am):
-    0 2 * * * cd /path/to/spotim8 && ./scripts/run_sync_local.sh
+    0 2 * * * cd /path/to/spotim8 && /path/to/venv/bin/python scripts/run_sync_local.py
     
     # Uses refresh token for headless/automated auth
 """
@@ -82,6 +82,7 @@ PREFIX = os.environ.get("PLAYLIST_PREFIX", "Finds")
 
 # Playlist naming templates
 MONTHLY_NAME_TEMPLATE = "{owner}{prefix}{mon}{year}"
+YEARLY_NAME_TEMPLATE = "{owner}{prefix}{year}"  # For consolidating old monthly playlists
 GENRE_MONTHLY_TEMPLATE = "{genre}{prefix}{mon}{year}"
 GENRE_NAME_TEMPLATE = "{owner}am{genre}"
 
@@ -91,7 +92,7 @@ MAX_GENRE_PLAYLISTS = 19
 
 # Paths
 DATA_DIR = PROJECT_ROOT / "data"
-LIKED_SONGS_PLAYLIST_ID = "liked_songs"
+LIKED_SONGS_PLAYLIST_ID = "__liked_songs__"  # Match spotim8 library constant
 
 # Month name mapping
 MONTH_NAMES = {
@@ -244,12 +245,17 @@ def _to_uri(track_id: str) -> str:
 
 def _parse_genres(genre_data) -> list:
     """Parse genre data from various formats."""
+    # Handle None or empty
+    if genre_data is None:
+        return []
+    # Handle numpy arrays first (before checking truthiness which fails on arrays)
+    if isinstance(genre_data, np.ndarray):
+        return list(genre_data) if len(genre_data) > 0 else []
+    # Handle empty collections
     if not genre_data:
         return []
     if isinstance(genre_data, list):
         return genre_data
-    if isinstance(genre_data, np.ndarray):
-        return list(genre_data)
     if isinstance(genre_data, str):
         try:
             return ast.literal_eval(genre_data)
@@ -272,6 +278,21 @@ def format_playlist_name(template: str, month_str: str, genre: str = None) -> st
         genre=genre or "",
         mon=mon,
         year=year
+    )
+
+
+def format_yearly_playlist_name(year: str) -> str:
+    """Format yearly playlist name like 'AJFinds2025'."""
+    # Handle both 4-digit and 2-digit years
+    if len(year) == 4:
+        year_short = year[2:]
+    else:
+        year_short = year
+    
+    return YEARLY_NAME_TEMPLATE.format(
+        owner=OWNER_NAME,
+        prefix=PREFIX,
+        year=year_short
     )
 
 
@@ -627,6 +648,176 @@ def update_monthly_playlists(sp: spotipy.Spotify, current_month_only: bool = Tru
     return month_to_tracks
 
 
+def consolidate_old_monthly_playlists(sp: spotipy.Spotify) -> None:
+    """Consolidate monthly playlists older than the last 2 years into yearly playlists.
+    
+    Only keeps the last 2 years as monthly (current year and previous year).
+    For any year older than that:
+    - Combine all monthly playlists (e.g., AJFindsJan23, AJFindsFeb23, ...) 
+      into a single yearly playlist (e.g., AJFinds2023)
+    - Delete the old monthly playlists
+    """
+    log("\n--- Consolidating Old Monthly Playlists ---")
+    
+    current_year = datetime.now().year
+    cutoff_year = current_year - 1  # Keep only the last 2 years as monthly (current year and previous year)
+    
+    # Get all existing playlists
+    existing = get_existing_playlists(sp)
+    user = api_call(sp.current_user)
+    user_id = user["id"]
+    
+    # Pattern: {owner}{prefix}{mon}{year} e.g., "AJFindsJan23"
+    # Extract monthly playlists matching the pattern
+    monthly_pattern = f"{OWNER_NAME}{PREFIX}"
+    monthly_playlists = {}
+    
+    for playlist_name, playlist_id in existing.items():
+        if playlist_name.startswith(monthly_pattern):
+            # Check if it matches monthly format (has a month name)
+            for mon_abbr in MONTH_NAMES.values():
+                if playlist_name.startswith(f"{monthly_pattern}{mon_abbr}"):
+                    # Extract year (2 or 4 digits at the end)
+                    remaining = playlist_name[len(f"{monthly_pattern}{mon_abbr}"):]
+                    if remaining.isdigit():
+                        year_str = remaining
+                        # Convert 2-digit year to 4-digit (assume 2000s)
+                        if len(year_str) == 2:
+                            year = 2000 + int(year_str)
+                        else:
+                            year = int(year_str)
+                        
+                        if year < cutoff_year:
+                            if year not in monthly_playlists:
+                                monthly_playlists[year] = []
+                            monthly_playlists[year].append((playlist_name, playlist_id))
+                    break
+    
+    if not monthly_playlists:
+        log("  No old monthly playlists to consolidate")
+        return
+    
+    log(f"  Found monthly playlists from {len(monthly_playlists)} year(s) to consolidate")
+    
+    # For each old year, consolidate monthly playlists into yearly
+    for year in sorted(monthly_playlists.keys()):
+        year_playlist_name = format_yearly_playlist_name(str(year))
+        monthly_list = monthly_playlists[year]
+        
+        log(f"  Consolidating {len(monthly_list)} playlists from {year} into {year_playlist_name}")
+        
+        # Collect all tracks from all monthly playlists for this year
+        all_tracks = set()
+        for monthly_name, monthly_id in monthly_list:
+            tracks = get_playlist_tracks(sp, monthly_id)
+            all_tracks.update(tracks)
+            log(f"    - {monthly_name}: {len(tracks)} tracks")
+        
+        if not all_tracks:
+            log(f"    ⚠️  No tracks found, skipping {year_playlist_name}")
+            continue
+        
+        all_tracks_list = list(all_tracks)
+        
+        # Create or update yearly playlist
+        if year_playlist_name in existing:
+            # Update existing yearly playlist
+            yearly_id = existing[year_playlist_name]
+            already = get_playlist_tracks(sp, yearly_id)
+            to_add = [u for u in all_tracks_list if u not in already]
+            
+            if to_add:
+                for chunk in _chunked(to_add, 50):
+                    api_call(sp.playlist_add_items, yearly_id, chunk)
+                log(f"  {year_playlist_name}: +{len(to_add)} tracks (total: {len(all_tracks_list)})")
+            else:
+                log(f"  {year_playlist_name}: already up to date ({len(all_tracks_list)} tracks)")
+        else:
+            # Create new yearly playlist
+            pl = api_call(
+                sp.user_playlist_create,
+                user_id,
+                year_playlist_name,
+                public=False,
+                description=f"Liked songs from {year} (consolidated from monthly playlists)",
+            )
+            yearly_id = pl["id"]
+            
+            for chunk in _chunked(all_tracks_list, 50):
+                api_call(sp.playlist_add_items, yearly_id, chunk)
+            log(f"  {year_playlist_name}: created with {len(all_tracks_list)} tracks")
+        
+        # Delete old monthly playlists
+        for monthly_name, monthly_id in monthly_list:
+            try:
+                api_call(sp.user_playlist_unfollow, user_id, monthly_id)
+                log(f"    ✓ Deleted {monthly_name}")
+            except Exception as e:
+                log(f"    ⚠️  Failed to delete {monthly_name}: {e}")
+        
+        log(f"  ✅ Consolidated {year} ({len(monthly_list)} playlists → 1 yearly playlist)")
+
+
+def delete_old_monthly_playlists(sp: spotipy.Spotify) -> None:
+    """Delete old genre-split monthly playlists older than cutoff year.
+    
+    Standard monthly playlists are handled by consolidate_old_monthly_playlists().
+    This function only handles genre-split playlists (HipHopFindsJan23, etc.).
+    """
+    log("\n--- Deleting Old Genre-Split Monthly Playlists ---")
+    
+    current_year = datetime.now().year
+    cutoff_year = current_year - 1  # Keep only the last 2 years as monthly (current year and previous year)
+    
+    # Get all existing playlists
+    existing = get_existing_playlists(sp)
+    
+    # Pattern for genre monthly: {genre}{prefix}{mon}{year}
+    genre_patterns = []
+    for genre in SPLIT_GENRES:
+        genre_patterns.append(f"{genre}{PREFIX}")
+    
+    playlists_to_delete = []
+    
+    for playlist_name, playlist_id in existing.items():
+        # Check genre-split monthly playlists only
+        for genre_pattern in genre_patterns:
+            if playlist_name.startswith(genre_pattern):
+                for mon_abbr in MONTH_NAMES.values():
+                    if playlist_name.startswith(f"{genre_pattern}{mon_abbr}"):
+                        remaining = playlist_name[len(f"{genre_pattern}{mon_abbr}"):]
+                        if remaining.isdigit():
+                            year_str = remaining
+                            # Convert 2-digit year to 4-digit (assume 2000s)
+                            if len(year_str) == 2:
+                                year = 2000 + int(year_str)
+                            else:
+                                year = int(year_str)
+                            
+                            if year < cutoff_year:
+                                playlists_to_delete.append((playlist_name, playlist_id))
+                        break
+    
+    if not playlists_to_delete:
+        log("  No old genre-split monthly playlists to delete")
+        return
+    
+    log(f"  Found {len(playlists_to_delete)} old genre-split monthly playlists to delete")
+    
+    # Get user ID for deletion
+    user = api_call(sp.current_user)
+    user_id = user["id"]
+    
+    for playlist_name, playlist_id in playlists_to_delete:
+        try:
+            api_call(sp.user_playlist_unfollow, user_id, playlist_id)
+            log(f"    ✓ Deleted {playlist_name}")
+        except Exception as e:
+            log(f"    ⚠️  Failed to delete {playlist_name}: {e}")
+    
+    log(f"  ✅ Deleted {len(playlists_to_delete)} old genre-split monthly playlists")
+
+
 def update_genre_split_playlists(sp: spotipy.Spotify, month_to_tracks: dict) -> None:
     """Update genre-split monthly playlists (HipHop, Dance, Other)."""
     if not month_to_tracks:
@@ -830,6 +1021,12 @@ Examples:
         
         # Playlist update phase
         if not args.sync_only:
+            # Consolidate old monthly playlists into yearly (runs first)
+            consolidate_old_monthly_playlists(sp)
+            
+            # Delete old monthly playlists (including genre-split)
+            delete_old_monthly_playlists(sp)
+            
             # Update monthly playlists
             month_to_tracks = update_monthly_playlists(
                 sp, current_month_only=not args.all_months

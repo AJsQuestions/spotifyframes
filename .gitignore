@@ -54,12 +54,13 @@ Thumbs.db
 notebooks/.cache
 
 # ----- Data Files -----
-# Track parquet files (synced library data)
-# These are the base files that get updated by the sync workflow
-!data/*.parquet
+# Ignore parquet files (user-specific synced library data)
+# These are generated locally and shouldn't be committed
+data/*.parquet
 
 # Ignore local cache and metadata (regenerated on sync)
 data/.api_cache/
+data/catalog_meta.json
 data/meta.json
 
 # Streaming history (user imports these manually)

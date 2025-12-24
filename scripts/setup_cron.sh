@@ -13,7 +13,7 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-SYNC_SCRIPT="$PROJECT_ROOT/scripts/run_sync_local.sh"
+SYNC_SCRIPT="$PROJECT_ROOT/scripts/run_sync_local.py"
 LOG_DIR="$PROJECT_ROOT/logs"
 
 # Verify the sync script exists
@@ -30,7 +30,12 @@ mkdir -p "$LOG_DIR"
 
 # Cron schedule: Run daily at 2am
 CRON_SCHEDULE="0 2 * * *"
-CRON_COMMAND="cd $PROJECT_ROOT && $SYNC_SCRIPT >> $LOG_DIR/sync.log 2>&1"
+# Use Python directly with venv
+VENV_PYTHON="$PROJECT_ROOT/venv/bin/python"
+if [ ! -f "$VENV_PYTHON" ]; then
+    VENV_PYTHON="$PROJECT_ROOT/.venv/bin/python"
+fi
+CRON_COMMAND="cd $PROJECT_ROOT && $VENV_PYTHON $SYNC_SCRIPT >> $LOG_DIR/sync.log 2>&1"
 
 # Create temporary file with new cron job
 TEMP_CRON=$(mktemp)
@@ -60,5 +65,5 @@ echo "To remove this cron job:"
 echo "  crontab -e  # Then delete the line with 'spotim8' or 'run_sync_local'"
 echo ""
 echo "To test the sync script manually:"
-echo "  $SYNC_SCRIPT"
+echo "  python $SYNC_SCRIPT"
 
