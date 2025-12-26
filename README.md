@@ -1,6 +1,6 @@
 # 🎵 Spotim8
 
-Your **personal Spotify analytics platform** with **automated playlist management**.
+**Personal Spotify analytics platform** with **automated playlist management**.
 
 Turn your Spotify library into tidy DataFrames, analyze your listening habits, and automatically organize your music into smart playlists.
 
@@ -13,6 +13,7 @@ Turn your Spotify library into tidy DataFrames, analyze your listening habits, a
 - 🤖 **Daily Automation** - Local cron job updates playlists automatically
 - 💾 **Local Cache** - Parquet files for fast offline access
 - 🔄 **No Duplicates** - Smart deduplication on every run
+- 📱 **iOS App** - Trigger syncs and view your library from your iPhone
 
 ## 📋 Requirements
 
@@ -20,12 +21,14 @@ Turn your Spotify library into tidy DataFrames, analyze your listening habits, a
 - Spotify Developer Account (free)
 - Spotify Premium (for some features)
 
+---
+
 ## 🚀 Quick Start
 
-### Installation
+### 1. Installation
 
 ```bash
-# Clone the repo
+# Clone the repository
 git clone https://github.com/AJsQuestions/spotim8.git
 cd spotim8
 
@@ -38,7 +41,7 @@ pip install --upgrade pip
 pip install -e .
 ```
 
-### Spotify API Setup
+### 2. Spotify API Setup
 
 1. Go to [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
 2. Log in with your Spotify account
@@ -51,7 +54,7 @@ pip install -e .
 5. Click **"Save"**
 6. Copy your **Client ID** and **Client Secret** from Settings
 
-### Environment Configuration
+### 3. Environment Configuration
 
 Create a `.env` file in the project root:
 
@@ -62,6 +65,7 @@ cp env.example .env
 Edit `.env` and add your credentials:
 
 ```bash
+# Required
 SPOTIPY_CLIENT_ID=your_client_id_here
 SPOTIPY_CLIENT_SECRET=your_client_secret_here
 SPOTIPY_REDIRECT_URI=http://127.0.0.1:8888/callback
@@ -74,18 +78,16 @@ SPOTIPY_REFRESH_TOKEN=your_refresh_token_here
 PLAYLIST_OWNER_NAME=AJ
 PLAYLIST_PREFIX=Finds
 
-# Optional: Email notifications (sends email after each cron run)
+# Optional: Email notifications
 EMAIL_ENABLED=true
 EMAIL_SMTP_HOST=smtp.gmail.com
 EMAIL_SMTP_PORT=587
 EMAIL_SMTP_USER=your_email@gmail.com
 EMAIL_SMTP_PASSWORD=your_app_password
 EMAIL_TO=recipient@example.com
-EMAIL_FROM=your_email@gmail.com  # Optional, defaults to EMAIL_SMTP_USER
-EMAIL_SUBJECT_PREFIX=[Spotify Sync]  # Optional prefix for email subject
 ```
 
-### Get Refresh Token (Recommended for Automation)
+### 4. Get Refresh Token (Recommended)
 
 For automated runs without browser interaction:
 
@@ -94,23 +96,23 @@ source venv/bin/activate
 python scripts/get_token.py
 ```
 
-This will:
-- Open your browser for Spotify authorization
-- Generate a refresh token
-- Show you the token to add to your `.env` file
+This will open your browser for Spotify authorization and generate a refresh token.
 
-### First Run
+### 5. First Sync
 
 ```bash
 # Sync your library (first time can take 1-2+ hours for large libraries)
 python scripts/sync.py
 ```
 
+---
+
 ## 🔧 Python API
 
 ```python
-from spotim8 import Spotim8, build_all_features
+from spotim8 import Spotim8
 
+# Initialize client
 sf = Spotim8.from_env(progress=True)
 
 # Sync your library
@@ -123,6 +125,10 @@ artists = sf.artists()          # Artists with genres
 wide = sf.library_wide()        # Everything joined
 ```
 
+See [examples/01_quickstart.py](examples/01_quickstart.py) for a complete example.
+
+---
+
 ## 📓 Notebooks
 
 | Notebook | Description |
@@ -131,10 +137,11 @@ wide = sf.library_wide()        # Everything joined
 | `02_analyze_library.ipynb` | Visualize your listening habits |
 | `03_playlist_analysis.ipynb` | Genre analysis and playlist clustering |
 | `04_liked_songs_monthly_playlists.ipynb` | **Create all automated playlists** |
+| `05_identify_redundant_playlists.ipynb` | Find and consolidate similar playlists |
 
-### Notebook 04: Playlist Generator
+### Playlist Generation
 
-Creates **monthly and genre playlists** automatically:
+Notebook `04_liked_songs_monthly_playlists.ipynb` creates automated playlists:
 
 ```
 📅 Monthly Playlists:
@@ -147,9 +154,9 @@ Creates **monthly and genre playlists** automatically:
    {Owner}am{Genre} → e.g., amHip-Hop, amElectronic
 ```
 
-## 🤖 Local Automation
+---
 
-Run the sync script locally for better reliability and no timeout issues. Large libraries can take hours to sync, which often exceeds CI/CD time limits.
+## 🤖 Automation
 
 ### Sync Options
 
@@ -187,14 +194,11 @@ The cron job runs daily at 2:00 AM and logs to `logs/sync.log`.
 
 ### Email Notifications
 
-Get email notifications after each sync run (success or failure). Configure in your `.env` file:
+Get email notifications after each sync run. Configure in your `.env` file:
 
 **Gmail Setup:**
 1. Enable 2-factor authentication on your Gmail account
-2. Generate an [App Password](https://myaccount.google.com/apppasswords):
-   - Go to Google Account → Security → 2-Step Verification → App passwords
-   - Select "Mail" and "Other (Custom name)" → Enter "Spotify Sync"
-   - Copy the generated 16-character password
+2. Generate an [App Password](https://myaccount.google.com/apppasswords)
 3. Add to `.env`:
    ```bash
    EMAIL_ENABLED=true
@@ -210,13 +214,6 @@ Get email notifications after each sync run (success or failure). Configure in y
 - **Yahoo**: `smtp.mail.yahoo.com`, port `587`
 - **Custom SMTP**: Use your provider's SMTP settings
 
-**Email Features:**
-- ✅ Success/failure status
-- ✅ Summary statistics (tracks added, playlists updated, etc.)
-- ✅ Full log output
-- ✅ Error details if sync fails
-- ✅ HTML-formatted emails
-
 **Note:** Email failures won't break the sync - notifications are non-blocking.
 
 ### Why Local Execution?
@@ -227,26 +224,26 @@ Get email notifications after each sync run (success or failure). Configure in y
 - ✅ **Cost-free** - Uses your own machine, no CI minutes
 - ✅ **Better debugging** - Direct access to logs and data files
 
-## 📱 iOS App (Personal Use)
+---
 
-A simple iOS app to trigger sync automation and static analysis from your iPhone.
+## 📱 iOS App
+
+A simple iOS app to trigger sync automation and view your library from your iPhone.
 
 ### Quick Setup
 
 1. **Start the server** (on your Mac/computer):
    ```bash
    source venv/bin/activate
+   pip install flask flask-cors  # If not already installed
    python server/server.py
    ```
-   Note the IP address and port shown (e.g., `http://192.168.1.252:5001`)
-   
-   **Note:** Port 5000 is often used by AirPlay on macOS, so the server defaults to port 5001.
+   Note the IP address shown (e.g., `http://192.168.1.252:5001`)
 
 2. **Build the iOS app:**
    - Create a new Xcode project and add source files from `apps/ios/Spotim8/`
    - See [apps/ios/README.md](apps/ios/README.md) for detailed step-by-step instructions
-   - Connect your iPhone
-   - Build and run (⌘R)
+   - Connect your iPhone and build (⌘R)
 
 3. **Configure the app:**
    - Open Settings (gear icon)
@@ -256,8 +253,11 @@ A simple iOS app to trigger sync automation and static analysis from your iPhone
 4. **Use the app:**
    - Tap "Run Sync Automation" to trigger sync
    - Tap "Run Static Analysis" to analyze your library
+   - Browse your library in the Library tab
 
-**📖 For complete step-by-step setup instructions, see [apps/ios/README.md](apps/ios/README.md)**
+**📖 For complete setup instructions, see [apps/ios/README.md](apps/ios/README.md)**
+
+---
 
 ## 📁 Data Tables
 
@@ -270,6 +270,8 @@ A simple iOS app to trigger sync automation and static analysis from your iPhone
 | `artists()` | Artist info with genres |
 | `library_wide()` | Everything joined together |
 
+---
+
 ## 🎛️ CLI
 
 ```bash
@@ -281,7 +283,12 @@ spotim8 status
 
 # Export data
 spotim8 export --table tracks --out tracks.parquet
+
+# Market data (browse/search)
+spotim8 market --kind new_releases --country US --limit 50 --out releases.parquet
 ```
+
+---
 
 ## 📂 Project Structure
 
@@ -294,12 +301,16 @@ spotim8/
 │   ├── features.py               # Feature engineering
 │   ├── genres.py                 # Genre classification
 │   ├── analysis.py               # Library analysis utilities
-│   └── ...                       # Other utilities
+│   ├── market.py                 # Market data (browse/search)
+│   ├── export.py                 # Data export utilities
+│   ├── ratelimit.py              # Rate limiting utilities
+│   └── utils.py                  # Helper functions
 ├── notebooks/                    # Jupyter notebooks for analysis
 │   ├── 01_sync_data.ipynb        # Sync library data
 │   ├── 02_analyze_library.ipynb  # Visualize listening habits
 │   ├── 03_playlist_analysis.ipynb # Genre analysis & clustering
-│   └── 04_liked_songs_monthly_playlists.ipynb # Create playlists
+│   ├── 04_liked_songs_monthly_playlists.ipynb # Create playlists
+│   └── 05_identify_redundant_playlists.ipynb # Find similar playlists
 ├── scripts/                      # Automation and utility scripts
 │   ├── sync.py                   # Main sync & playlist update
 │   ├── runner.py                 # Local sync runner (cron wrapper)
@@ -319,20 +330,15 @@ spotim8/
 │       │   ├── Views/            # UI views
 │       │   ├── Services/         # API services
 │       │   └── Models/           # Data models
-│       └── Spotim8app/           # Xcode project
+│       └── README.md             # iOS app setup guide
 ├── examples/
 │   └── 01_quickstart.py          # Quick start example
 ├── tests/                        # Test suite
-└── data/                         # Cached parquet files (gitignored)
+├── data/                         # Cached parquet files (gitignored)
+└── logs/                         # Log files (gitignored)
 ```
 
-## 🔒 Security & Secrets
-
-**Do NOT commit secrets** (client IDs, client secrets, refresh tokens) to this repository.
-
-- Keep local credentials in a `.env` file and never commit it
-- This repository already ignores `.env` and common secret files via `.gitignore`
-- If you accidentally commit a secret, rotate it immediately (revoke the secret in the provider) and remove it from git history
+---
 
 ## 🐛 Troubleshooting
 
@@ -370,6 +376,18 @@ Make sure your `.env` file exists and has:
 tail -f logs/sync.log
 ```
 
+---
+
+## 🔒 Security & Secrets
+
+**Do NOT commit secrets** (client IDs, client secrets, refresh tokens) to this repository.
+
+- Keep local credentials in a `.env` file and never commit it
+- This repository already ignores `.env` and common secret files via `.gitignore`
+- If you accidentally commit a secret, rotate it immediately (revoke the secret in the provider) and remove it from git history
+
+---
+
 ## 🤝 Contributing
 
 Thank you for your interest in contributing to Spotim8!
@@ -401,7 +419,9 @@ ruff check spotim8/
 4. Update documentation if needed
 5. Submit a pull request with a clear description
 
-## 🔒 Spotify API Notes
+---
+
+## 📝 Spotify API Notes
 
 Spotify deprecated these endpoints for new apps (Nov 2024):
 - ❌ Audio features (danceability, energy, etc.)
@@ -409,6 +429,8 @@ Spotify deprecated these endpoints for new apps (Nov 2024):
 - ⚠️ Recommendations (may work for older apps)
 
 This library focuses on what's still available.
+
+---
 
 ## 📄 License
 

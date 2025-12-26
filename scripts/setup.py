@@ -6,7 +6,7 @@ This script sets up a virtual environment and guides you through
 configuring your Spotify API credentials.
 
 Usage:
-    python scripts/setup_local.py
+    python scripts/setup.py
 """
 
 import os
