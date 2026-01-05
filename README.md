@@ -1,18 +1,22 @@
-# 🎵 Spotim8
+# 🎵 Spotim8 v2.0.0
 
-**Personal Spotify analytics platform** with **automated playlist management**.
+**Personal Spotify analytics platform** with **automated playlist management** and **streaming history integration**.
 
-Turn your Spotify library into tidy DataFrames, analyze your listening habits, and automatically organize your music into smart playlists.
+Turn your Spotify library into tidy DataFrames, analyze your listening habits, and automatically organize your music into smart playlists based on both your library and actual listening patterns.
 
 ## ✨ Features
 
 - 📊 **Pandas DataFrames** - Your library as tidy, mergeable tables
-- 📅 **Monthly Playlists** - Auto-create playlists like `FindsDec25`
+- 📅 **5 Playlist Types** - Finds, Top, Vibes, OnRepeat, and Discovery playlists
 - 🎸 **Genre-Split Playlists** - Separate by HipHop, Dance, Other
 - 🎵 **Master Genre Playlists** - All-time playlists by genre
+- 📈 **Streaming History Integration** - Analyze actual listening patterns from Spotify exports
+- 🎯 **Most Played Playlists** - Monthly playlists based on actual listening data
+- 🔍 **Discovery Playlists** - Track newly discovered music
 - 🤖 **Daily Automation** - Local cron job updates playlists automatically
 - 💾 **Local Cache** - Parquet files for fast offline access
 - 🔄 **No Duplicates** - Smart deduplication on every run
+- 📊 **Enhanced Analysis** - 7 comprehensive Jupyter notebooks for deep insights
 
 ## 📋 Requirements
 
@@ -132,26 +136,28 @@ See [examples/01_quickstart.py](examples/01_quickstart.py) for a complete exampl
 
 | Notebook | Description |
 |----------|-------------|
-| `01_sync_data.ipynb` | Download and cache your Spotify library |
-| `02_analyze_library.ipynb` | Visualize your listening habits |
+| `01_sync_data.ipynb` | Download and cache your Spotify library + streaming history |
+| `02_analyze_library.ipynb` | Visualize your listening habits and library statistics |
 | `03_playlist_analysis.ipynb` | Genre analysis and playlist clustering |
-| `04_liked_songs_monthly_playlists.ipynb` | **Create all automated playlists** |
-| `05_identify_redundant_playlists.ipynb` | Find and consolidate similar playlists |
+| `04_analyze_listening_history.ipynb` | **NEW in v2.0** - Analyze actual listening patterns from Spotify exports |
+| `05_liked_songs_monthly_playlists.ipynb` | **Create all automated playlists** |
+| `06_identify_redundant_playlists.ipynb` | Find and consolidate similar playlists |
+| `07_analyze_crashes.ipynb` | **NEW in v2.0** - Technical log analysis and crash detection |
 
 ### Playlist Generation
 
-Notebook `04_liked_songs_monthly_playlists.ipynb` creates automated playlists:
+The sync script and notebook `05_liked_songs_monthly_playlists.ipynb` create automated playlists:
 
-```
-📅 Monthly Playlists:
-   {Owner}{Prefix}{Mon}{Year} → e.g., FindsDec25
+**5 Playlist Types (v2.0):**
+- 📅 **Finds** - Liked songs: `{Owner}{Prefix}{Mon}{Year}` → e.g., `AJFindsDec25`
+- 🎯 **Top** - Most played: `{Owner}Top{Mon}{Year}` → e.g., `AJTopDec25`
+- 🔍 **Discovery** - New tracks: `{Owner}Dscvr{Mon}{Year}` → e.g., `AJDscvrDec25`
+- 🎸 **Genre-Split Monthly** - `{Genre}{Prefix}{Mon}{Year}` → e.g., `HipHopFindsDec25`, `DanceFindsDec25`
+- 🎵 **Master Genre Playlists** - `{Owner}am{Genre}` → e.g., `AJamHip-Hop`, `AJamElectronic`
 
-🎸 Genre-Split Monthly:
-   {Genre}{Prefix}{Mon}{Year} → e.g., HipHopFindsDec25, DanceFindsDec25
-
-🎵 Master Genre Playlists:
-   {Owner}am{Genre} → e.g., amHip-Hop, amElectronic
-```
+**Automatic Consolidation:**
+- Last 3 months kept as monthly playlists
+- Older months automatically consolidated into yearly playlists (e.g., `AJFinds24`, `AJTop24`)
 
 ---
 
@@ -186,13 +192,6 @@ Set up daily sync on Linux/Mac:
 ```
 
 The cron job runs daily at 2:00 AM and logs to `logs/sync.log`.
-
-**⚠️ macOS Users:** Cron jobs require **Full Disk Access** permission. See [CRON_SETUP.md](CRON_SETUP.md) for setup instructions.
-
-**Check cron status:**
-```bash
-./scripts/check_cron.sh
-```
 
 **Features:**
 - ✅ Automatic log rotation (keeps last 3 backups)
@@ -297,8 +296,9 @@ spotim8/
 │   ├── 01_sync_data.ipynb        # Sync library data
 │   ├── 02_analyze_library.ipynb  # Visualize listening habits
 │   ├── 03_playlist_analysis.ipynb # Genre analysis & clustering
-│   ├── 04_liked_songs_monthly_playlists.ipynb # Create playlists
-│   └── 05_identify_redundant_playlists.ipynb # Find similar playlists
+│   ├── 04_analyze_listening_history.ipynb # Analyze listening patterns from exports
+│   ├── 05_liked_songs_monthly_playlists.ipynb # Create playlists
+│   └── 06_identify_redundant_playlists.ipynb # Find similar playlists
 ├── scripts/                      # Automation and utility scripts
 │   ├── sync.py                   # Main sync & playlist update script
 │   ├── runner.py                 # Local sync runner wrapper

@@ -48,8 +48,20 @@ from .analysis import (
     build_playlist_genre_profiles,
     canonical_core_genre,
 )
+from .streaming_history import (
+    sync_all_export_data,
+    sync_streaming_history,
+    load_streaming_history,
+    load_search_queries_cached,
+    load_wrapped_data_cached,
+    load_follow_data_cached,
+    load_library_snapshot_cached,
+    load_playback_errors_cached,
+    load_playback_retries_cached,
+    load_webapi_events_cached,
+)
 
-__version__ = "1.0.0"
+__version__ = "2.0.0"
 
 __all__ = [
     # Main client
@@ -86,4 +98,15 @@ __all__ = [
     "get_genres_list",
     "build_playlist_genre_profiles",
     "canonical_core_genre",
+    # Streaming history and export data
+    "sync_all_export_data",
+    "sync_streaming_history",
+    "load_streaming_history",
+    "load_search_queries_cached",
+    "load_wrapped_data_cached",
+    "load_follow_data_cached",
+    "load_library_snapshot_cached",
+    "load_playback_errors_cached",
+    "load_playback_retries_cached",
+    "load_webapi_events_cached",
 ]

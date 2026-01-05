@@ -58,6 +58,11 @@ notebooks/.cache
 # Ignore parquet files (user-specific synced library data)
 # These are generated locally and shouldn't be committed
 data/*.parquet
+data/*.json
+# But allow specific data structure folders (user imports these)
+data/Spotify Account Data/
+data/Spotify Extended Streaming History/
+data/Spotify Technical Log Information/
 
 # Ignore local cache and metadata (regenerated on sync)
 data/.api_cache/
@@ -84,6 +89,9 @@ logs/*.lock
 .env
 .env.local
 .env.*.local
+.env.bak
+.env.backup
+*.env.bak
 
 # ----- iOS App Projects -----
 # Ignore Xcode projects and build artifacts

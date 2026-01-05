@@ -123,12 +123,20 @@ if ! python -c "import spotipy, pandas, requests" 2>/dev/null; then
     exit 1
 fi
 
-# Run the sync script
+# Run the sync script via runner.py (ensures proper venv and environment)
 # Note: Using direct execution instead of timeout wrapper for better reliability
 # The sync script has its own retry logic and should complete within reasonable time
-log_msg "Running sync script..."
-python "$SYNC_SCRIPT" >> "$LOG_FILE" 2>&1
-EXIT_CODE=$?
+RUNNER_SCRIPT="$PROJECT_ROOT/scripts/runner.py"
+if [ -f "$RUNNER_SCRIPT" ]; then
+    log_msg "Running sync via runner.py..."
+    python "$RUNNER_SCRIPT" >> "$LOG_FILE" 2>&1
+    EXIT_CODE=$?
+else
+    # Fallback to direct sync.py execution
+    log_msg "Running sync script directly (runner.py not found)..."
+    python "$SYNC_SCRIPT" >> "$LOG_FILE" 2>&1
+    EXIT_CODE=$?
+fi
 
 if [ $EXIT_CODE -eq 0 ]; then
     log_msg "=========================================="

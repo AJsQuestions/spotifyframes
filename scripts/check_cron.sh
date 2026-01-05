@@ -68,36 +68,21 @@ echo ""
 
 # Check if macOS cron needs Full Disk Access
 echo "📝 macOS Cron Permission Check:"
-echo "   ⚠️  IMPORTANT: macOS cron needs Full Disk Access to run scripts!"
-echo ""
-echo "   To grant Full Disk Access (new macOS System Settings):"
-echo "   1. Open System Settings (or System Preferences on older macOS)"
-echo "   2. Go to: Privacy & Security"
-echo "   3. Scroll down to: Full Disk Access"
-echo "   4. Click the lock icon (bottom left) to unlock"
-echo "   5. Click the '+' button to add an app"
-echo "   6. Navigate to: /usr/sbin/cron"
-echo "   7. Select it and click 'Open'"
-echo "   8. Make sure the checkbox next to 'cron' is checked"
-echo "   9. Restart your Mac OR restart cron with: sudo launchctl stop com.apple.cron"
-echo ""
-echo "   Path to add: /usr/sbin/cron"
+echo "   On macOS, cron jobs may need Full Disk Access to work properly."
+echo "   To grant it:"
+echo "   1. System Preferences → Security & Privacy → Privacy"
+echo "   2. Select 'Full Disk Access'"
+echo "   3. Click the lock to make changes"
+echo "   4. Add '/usr/sbin/cron' to the list"
 echo ""
 
-# Test wrapper script syntax
-echo "🧪 Testing wrapper script syntax..."
-if bash -n "$WRAPPER" 2>/dev/null; then
-    echo "✅ Wrapper script syntax: VALID"
+# Test wrapper script
+echo "🧪 Testing wrapper script..."
+cd /Users/aryamaan/Desktop/Projects/spotim8
+if /bin/bash "$WRAPPER" --skip-sync > /dev/null 2>&1; then
+    echo "✅ Wrapper script test: SUCCESS"
 else
-    echo "❌ Wrapper script syntax: INVALID"
-    bash -n "$WRAPPER"
+    echo "❌ Wrapper script test: FAILED"
+    echo "   Run manually to see errors: /bin/bash $WRAPPER --skip-sync"
 fi
-echo ""
-echo "💡 To test the wrapper manually (will run full sync):"
-echo "   cd /Users/aryamaan/Desktop/Projects/spotim8"
-echo "   /bin/bash scripts/cron_wrapper.sh"
-echo ""
-echo "💡 Or test just the sync script:"
-echo "   cd /Users/aryamaan/Desktop/Projects/spotim8"
-echo "   python scripts/sync.py --skip-sync"
 
