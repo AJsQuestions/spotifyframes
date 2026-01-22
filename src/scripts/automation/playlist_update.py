@@ -283,8 +283,9 @@ def update_genre_split_playlists(sp: spotipy.Spotify, month_to_tracks: dict) -> 
     # Late imports from sync.py
     from .sync import (
         log, verbose_log, DATA_DIR, ENABLE_MONTHLY, ENABLE_MOST_PLAYED, ENABLE_DISCOVERY,
-        LIKED_SONGS_PLAYLIST_ID, get_playlist_tracks, api_call,
-        _chunked, _update_playlist_description_with_genres, _playlist_tracks_cache
+        LIKED_SONGS_PLAYLIST_ID, get_existing_playlists, get_user_info, get_playlist_tracks, api_call,
+        _chunked, _update_playlist_description_with_genres, _playlist_tracks_cache,
+        _parse_genres, _get_all_track_genres
     )
     if not month_to_tracks:
         return
