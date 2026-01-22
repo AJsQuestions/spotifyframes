@@ -58,7 +58,7 @@ Thumbs.db
 .cache
 .cache-*
 *.cache
-notebooks/.cache
+spotim8/notebooks/.cache
 
 # ----- Data Files -----
 # Ignore ALL data files and folders (user-specific synced library data)

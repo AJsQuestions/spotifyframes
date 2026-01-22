@@ -1,4 +1,4 @@
-# 🎵 Spotim8 v3.0.0
+# 🎵 Spotim8 v4.0.0
 
 **Personal Spotify analytics platform** with **automated playlist management** and **streaming history integration**.
 
@@ -73,22 +73,23 @@ SPOTIPY_CLIENT_ID=your_client_id_here
 SPOTIPY_CLIENT_SECRET=your_client_secret_here
 SPOTIPY_REDIRECT_URI=http://127.0.0.1:8888/callback
 
-# Optional: Get refresh token for automated runs (no browser needed)
-# Run: python scripts/utils/get_token.py
+# Optional: For automated runs (get via scripts/utils/get_token.py)
 SPOTIPY_REFRESH_TOKEN=your_refresh_token_here
 
 # Optional: Customize playlist naming
 PLAYLIST_OWNER_NAME=AJ
 PLAYLIST_PREFIX=Finds
 
-# Optional: Email notifications
-EMAIL_ENABLED=true
-EMAIL_SMTP_HOST=smtp.gmail.com
-EMAIL_SMTP_PORT=587
-EMAIL_SMTP_USER=your_email@gmail.com
-EMAIL_SMTP_PASSWORD=your_app_password
-EMAIL_TO=recipient@example.com
+# Optional: Email notifications (see Email Notifications section below)
+# EMAIL_ENABLED=true
+# EMAIL_SMTP_HOST=smtp.gmail.com
+# EMAIL_SMTP_PORT=587
+# EMAIL_SMTP_USER=your_email@gmail.com
+# EMAIL_SMTP_PASSWORD=your_app_password
+# EMAIL_TO=recipient@example.com
 ```
+
+**Note:** The `.env` file only needs the required variables for basic functionality. All other settings have sensible defaults. See `env.example` for all available options.
 
 ### 4. Get Refresh Token (Recommended)
 
@@ -96,7 +97,7 @@ For automated runs without browser interaction:
 
 ```bash
 source venv/bin/activate
-python scripts/utils/get_token.py
+python spotim8/scripts/utils/get_token.py
 ```
 
 This will open your browser for Spotify authorization and generate a refresh token.
@@ -105,7 +106,7 @@ This will open your browser for Spotify authorization and generate a refresh tok
 
 ```bash
 # Sync your library (first time can take 1-2+ hours for large libraries)
-python scripts/automation/sync.py
+python spotim8/scripts/automation/sync.py
 ```
 
 ---
@@ -173,19 +174,19 @@ The sync script and notebook `05_liked_songs_monthly_playlists.ipynb` create aut
 
 ```bash
 # Full sync + playlist update (default)
-python scripts/automation/sync.py
+python spotim8/scripts/automation/sync.py
 
 # Or use the helper script (handles environment variables)
-python scripts/automation/runner.py
+python spotim8/scripts/automation/runner.py
 
 # Skip sync, only update playlists (fast, uses existing data)
-python scripts/automation/sync.py --skip-sync
+python spotim8/scripts/automation/sync.py --skip-sync
 
 # Sync only, don't update playlists
-python scripts/automation/sync.py --sync-only
+python spotim8/scripts/automation/sync.py --sync-only
 
 # Process all months, not just current month
-python scripts/automation/sync.py --all-months
+python spotim8/scripts/automation/sync.py --all-months
 ```
 
 ### Scheduled Automation (Cron)
@@ -194,7 +195,7 @@ Set up daily sync on Linux/Mac:
 
 ```bash
 # Easy setup (recommended):
-./scripts/automation/cron.sh
+./spotim8/scripts/automation/cron.sh
 ```
 
 The cron job runs daily at 2:00 AM and logs to `logs/sync.log`.
@@ -209,12 +210,12 @@ The cron job runs daily at 2:00 AM and logs to `logs/sync.log`.
 **Manual setup** (if needed):
 ```bash
 crontab -e
-# Add: 0 2 * * * /bin/bash /path/to/spotim8/scripts/automation/cron_wrapper.sh
+# Add: 0 2 * * * /bin/bash /path/to/spotim8/spotim8/scripts/automation/cron_wrapper.sh
 ```
 
 **Test the wrapper manually:**
 ```bash
-/bin/bash scripts/automation/cron_wrapper.sh --skip-sync
+/bin/bash spotim8/scripts/automation/cron_wrapper.sh --skip-sync
 ```
 
 ### Email Notifications
@@ -303,37 +304,35 @@ spotim8/
 │   ├── market.py                 # Market data (browse/search)
 │   ├── export.py                 # Data export utilities
 │   ├── ratelimit.py              # Rate limiting utilities
-│   └── utils.py                  # Helper functions
-│
-├── notebooks/                    # Jupyter notebooks for analysis
-│   ├── 01_sync_data.ipynb        # Sync library data & streaming history
-│   ├── 02_analyze_library.ipynb  # Visualize listening habits
-│   ├── 03_playlist_analysis.ipynb # Genre analysis & clustering
-│   ├── 04_analyze_listening_history.ipynb # Analyze listening patterns
-│   ├── 05_liked_songs_monthly_playlists.ipynb # Create automated playlists
-│   ├── 06_identify_redundant_playlists.ipynb # Find similar playlists
-│   ├── 07_analyze_crashes.ipynb  # Technical log analysis
-│   └── notebook_helpers.py       # Shared notebook utilities
-│
-├── scripts/                      # Scripts organized by category (v3.0+)
-│   ├── automation/               # Automation and sync scripts
-│   │   ├── sync.py               # Main sync & playlist update script
-│   │   ├── runner.py             # Local sync runner wrapper
-│   │   ├── cron_wrapper.sh       # Robust cron wrapper (lock files, log rotation)
-│   │   ├── cron.sh               # Cron job setup helper
-│   │   ├── check_cron.sh         # Cron diagnostic tool
-│   │   └── email_notify.py       # Email notification service
-│   ├── playlist/                 # Playlist management scripts
-│   │   ├── merge_playlists.py    # Merge two playlists
-│   │   ├── merge_multiple_playlists.py # Merge multiple playlists
-│   │   ├── merge_to_new_playlist.py # Merge to new playlist
-│   │   ├── delete_playlists.py   # Delete playlists
-│   │   ├── add_genre_tags_to_descriptions.py # Add genre tags
-│   │   ├── update_all_playlist_descriptions.py # Update descriptions
-│   │   └── playlist_helpers.py   # Shared playlist utilities
-│   └── utils/                    # Utility scripts
-│       ├── get_token.py          # Get refresh token for automation
-│       └── setup.py              # Initial setup helper
+│   ├── utils.py                  # Helper functions
+│   ├── notebooks/                # Jupyter notebooks for analysis
+│   │   ├── 01_sync_data.ipynb        # Sync library data & streaming history
+│   │   ├── 02_analyze_library.ipynb  # Visualize listening habits
+│   │   ├── 03_playlist_analysis.ipynb # Genre analysis & clustering
+│   │   ├── 04_analyze_listening_history.ipynb # Analyze listening patterns
+│   │   ├── 05_liked_songs_monthly_playlists.ipynb # Create automated playlists
+│   │   ├── 06_identify_redundant_playlists.ipynb # Find similar playlists
+│   │   ├── 07_analyze_crashes.ipynb  # Technical log analysis
+│   │   └── notebook_helpers.py       # Shared notebook utilities
+│   └── scripts/                  # Scripts organized by category (v3.0+)
+│       ├── automation/           # Automation and sync scripts
+│       │   ├── sync.py           # Main sync & playlist update script
+│       │   ├── runner.py         # Local sync runner wrapper
+│       │   ├── cron_wrapper.sh   # Robust cron wrapper (lock files, log rotation)
+│       │   ├── cron.sh           # Cron job setup helper
+│       │   ├── check_cron.sh     # Cron diagnostic tool
+│       │   └── email_notify.py   # Email notification service
+│       ├── playlist/             # Playlist management scripts
+│       │   ├── merge_playlists.py    # Merge two playlists
+│       │   ├── merge_multiple_playlists.py # Merge multiple playlists
+│       │   ├── merge_to_new_playlist.py # Merge to new playlist
+│       │   ├── delete_playlists.py   # Delete playlists
+│       │   ├── add_genre_tags_to_descriptions.py # Add genre tags
+│       │   ├── update_all_playlist_descriptions.py # Update descriptions
+│       │   └── playlist_helpers.py   # Shared playlist utilities
+│       └── utils/                # Utility scripts
+│           ├── get_token.py      # Get refresh token for automation
+│           └── setup.py          # Initial setup helper
 │
 ├── examples/                     # Example code
 │   └── 01_quickstart.py          # Quick start example
@@ -360,10 +359,10 @@ spotim8/
 ### Key Directories
 
 - **`spotim8/`**: Core library - main Python package
-- **`notebooks/`**: Analysis notebooks - run sequentially for full workflow
-- **`scripts/automation/`**: Sync and automation - daily cron jobs
-- **`scripts/playlist/`**: Playlist management - merge, delete, update playlists
-- **`scripts/utils/`**: Utilities - token setup, project setup
+- **`spotim8/notebooks/`**: Analysis notebooks - run sequentially for full workflow
+- **`spotim8/scripts/automation/`**: Sync and automation - daily cron jobs
+- **`spotim8/scripts/playlist/`**: Playlist management - merge, delete, update playlists
+- **`spotim8/scripts/utils/`**: Utilities - token setup, project setup
 - **`examples/`**: Code examples - quick start templates
 - **`tests/`**: Test suite - unit and integration tests
 
@@ -388,7 +387,7 @@ Make sure your `.env` file exists and has:
 ### Authentication Issues
 
 1. Make sure your redirect URI matches exactly: `http://127.0.0.1:8888/callback`
-2. Get a fresh refresh token: `python scripts/utils/get_token.py`
+2. Get a fresh refresh token: `python spotim8/scripts/utils/get_token.py`
 3. Check that your Spotify app is not in "Development Mode" with restricted users (if using a free account)
 
 ### Sync Takes Too Long
@@ -396,7 +395,7 @@ Make sure your `.env` file exists and has:
 - First sync always takes longest (hours for large libraries)
 - Use `--skip-sync` to only update playlists without re-syncing:
   ```bash
-  python scripts/automation/runner.py --skip-sync
+  python spotim8/scripts/automation/runner.py --skip-sync
   ```
 
 ### Check Logs
@@ -438,10 +437,10 @@ pip install -e ".[dev]"
 pytest tests/
 
 # Format code
-black spotim8/ scripts/
+black spotim8/
 
 # Lint code
-ruff check spotim8/ scripts/
+ruff check spotim8/
 ```
 
 ---

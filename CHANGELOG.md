@@ -5,6 +5,43 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.0.0] - 2025-01-18
+
+### 🎉 Major Release: Smart Genre Management & Enhanced Automation
+
+### Added
+
+#### Smart Genre Tag Management
+- **Automatic Genre Tag Removal** - When tracks are manually removed from genre master playlists, their genre tags are automatically removed from the track's stored genres
+- **Genre Master Playlist Cleanup** - Genre master playlists now automatically remove tracks that don't match the genre (prevents accumulation of incorrect tracks)
+- **Incremental Sync After Write Operations** - Automatic incremental sync triggered after playlist modifications (controlled by `AUTO_SYNC_AFTER_WRITE` environment variable)
+
+#### Enhanced Emoji Diversity
+- **Updated Genre Emojis** - More diverse and culturally appropriate emoji selection for genre tags
+- **Removed Problematic Emojis** - Replaced stereotypical emojis with more inclusive alternatives (e.g., Latin genre emoji updated)
+
+### Changed
+
+#### Genre Master Playlist Behavior
+- **Automatic Track Removal** - Genre master playlists now remove tracks that don't match the genre (only for liked songs, preserves manually added non-liked tracks)
+- **Improved Genre Matching** - Better detection of tracks that should be in genre playlists vs. tracks that were manually added
+
+#### Automation Improvements
+- **Post-Write Sync Integration** - Playlist merge and modification scripts now trigger incremental syncs automatically
+- **Sync Helper Module** - New `spotim8/scripts/common/sync_helpers.py` module for shared sync functionality
+
+### Fixed
+
+- **Genre Master Playlist Overpopulation** - Fixed issue where genre master playlists would accumulate all liked songs instead of only genre-matching tracks
+- **Genre Tag Persistence** - Fixed issue where genre tags would persist even after tracks were removed from genre playlists
+- **Emoji Consistency** - Updated emoji mapping to be more consistent and diverse across all genres
+
+### Technical Improvements
+
+- **Better Error Handling** - Improved error handling in playlist update operations
+- **Code Organization** - Better separation of concerns in playlist update logic
+- **Documentation** - Updated documentation for new genre management features
+
 ## [3.0.0] - 2025-01-XX
 
 ### 🎉 Major Release: Project Reorganization & Structure Improvements

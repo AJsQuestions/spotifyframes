@@ -14,16 +14,16 @@ Usage:
     artists = sf.artists()
 """
 
-from .client import (
+from .core.client import (
     Spotim8,
     LIKED_SONGS_PLAYLIST_ID,
     LIKED_SONGS_PLAYLIST_NAME,
     DEFAULT_SCOPE,
 )
-from .catalog import CacheConfig, DataCatalog
-from .ratelimit import set_response_cache
-from .export import export_table
-from .features import (
+from .core.catalog import CacheConfig, DataCatalog
+from .utils.ratelimit import set_response_cache
+from .data.export import export_table
+from .features.features import (
     playlist_profile_features,
     artist_concentration_features,
     time_features,
@@ -31,7 +31,7 @@ from .features import (
     popularity_tier_features,
     build_all_features,
 )
-from .genres import (
+from .features.genres import (
     GENRE_SPLIT_RULES,
     SPLIT_GENRES,
     GENRE_RULES,
@@ -41,14 +41,14 @@ from .genres import (
     get_all_split_genres,
     get_all_broad_genres,
 )
-from .analysis import (
+from .analysis.analysis import (
     LibraryAnalyzer,
     PlaylistSimilarityEngine,
     get_genres_list,
     build_playlist_genre_profiles,
     canonical_core_genre,
 )
-from .streaming_history import (
+from .analysis.streaming_history import (
     sync_all_export_data,
     sync_streaming_history,
     load_streaming_history,

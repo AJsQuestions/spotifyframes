@@ -36,12 +36,12 @@ Thank you for your interest in contributing to Spotim8! This document provides g
 
 - **Formatting**: Use `black` for code formatting
   ```bash
-  black spotim8/ scripts/
+  black spotim8/
   ```
 
 - **Linting**: Use `ruff` for linting
   ```bash
-  ruff check spotim8/ scripts/
+  ruff check spotim8/
   ```
 
 - **Type Hints**: Prefer type hints for function signatures
@@ -85,11 +85,11 @@ spotim8/
 │   ├── client.py         # Main Spotim8 class
 │   ├── catalog.py        # Data caching
 │   └── ...
-├── scripts/              # Organized by category
-│   ├── automation/       # Sync & automation scripts
-│   ├── playlist/         # Playlist management scripts
-│   └── utils/            # Utility scripts
-├── notebooks/            # Jupyter notebooks for analysis
+│   ├── notebooks/        # Jupyter notebooks for analysis
+│   └── scripts/          # Organized by category
+│       ├── automation/   # Sync & automation scripts
+│       ├── playlist/     # Playlist management scripts
+│       └── utils/        # Utility scripts
 ├── examples/             # Example code
 └── tests/                # Test suite
 ```
@@ -97,9 +97,9 @@ spotim8/
 ### Where to Add Code
 
 - **New Features**: Add to `spotim8/` module
-- **Scripts**: Add to appropriate subdirectory in `scripts/`
+- **Scripts**: Add to appropriate subdirectory in `spotim8/scripts/`
 - **Examples**: Add to `examples/`
-- **Notebooks**: Add to `notebooks/` (use descriptive names)
+- **Notebooks**: Add to `spotim8/notebooks/` (use descriptive names)
 
 ## Testing
 
