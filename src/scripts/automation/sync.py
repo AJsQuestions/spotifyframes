@@ -192,6 +192,9 @@ BASE_PREFIX = parse_str_env("PLAYLIST_PREFIX", "Finds")
 # Import centralized config helpers (use from config module instead of duplicating)
 from src.scripts.common.config_helpers import parse_bool_env
 
+# Alias for backward compatibility during refactoring
+_parse_bool_env = parse_bool_env
+
 # Playlist type enable/disable flags (from .env)
 # Note: These are also defined in config.py, but we keep them here for backward compatibility
 # TODO: Remove these and import from config.py instead

@@ -549,7 +549,11 @@ def update_master_genre_playlists(sp: spotipy.Spotify) -> None:
         selected.extend(additional)
         verbose_log(f"  Added {len(additional)} genre(s) below threshold to ensure diversity (min {min_fallback} tracks)")
     
-    log(f"  Found {len(selected)} genre(s) (threshold: {adaptive_threshold} tracks, {adaptive_threshold/total_tracks_with_genres*100:.1f}% of library)")
+    if total_tracks_with_genres > 0:
+        threshold_pct = (adaptive_threshold / total_tracks_with_genres * 100)
+        log(f"  Found {len(selected)} genre(s) (threshold: {adaptive_threshold} tracks, {threshold_pct:.1f}% of library)")
+    else:
+        log(f"  Found {len(selected)} genre(s) (threshold: {adaptive_threshold} tracks)")
     if selected:
         for genre in selected:
             count = genre_counts[genre]
