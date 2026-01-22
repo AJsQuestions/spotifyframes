@@ -106,7 +106,20 @@ _RATE_BACKOFF_MAX = 16.0
 # (sync.py -> automation -> scripts -> src -> PROJECT_ROOT)
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = SCRIPT_DIR.parent.parent.parent.parent
-sys.path.insert(0, str(PROJECT_ROOT))
+
+# Verify PROJECT_ROOT is correct by checking for project markers
+if not (PROJECT_ROOT / "pyproject.toml").exists() and not (PROJECT_ROOT / ".git").exists():
+    # Fallback: try to find project root by looking for "src" directory
+    current = Path(__file__).resolve()
+    for parent in current.parents:
+        if (parent / "src").exists() and (parent / "pyproject.toml").exists():
+            PROJECT_ROOT = parent
+            break
+
+# Add to path (ensure it's first and not duplicated)
+project_root_str = str(PROJECT_ROOT)
+if project_root_str not in sys.path:
+    sys.path.insert(0, project_root_str)
 
 # Load .env file early so environment variables are available for module-level code
 if DOTENV_AVAILABLE:
