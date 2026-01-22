@@ -5,8 +5,8 @@ from pathlib import Path
 import shutil
 import tempfile
 
-from spotim8.core.client import Spotim8
-from spotim8.core.catalog import CacheConfig
+from src.core.client import Spotim8
+from src.core.catalog import CacheConfig
 
 class TestSpotim8(unittest.TestCase):
     def setUp(self):

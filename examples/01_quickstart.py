@@ -8,7 +8,7 @@ Before running, set environment variables:
     export SPOTIPY_REDIRECT_URI="http://127.0.0.1:8888/callback"
 """
 
-from spotim8 import Spotim8, build_all_features
+from src import Spotim8, build_all_features
 
 # Initialize client
 sf = Spotim8.from_env(progress=True)

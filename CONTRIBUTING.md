@@ -80,15 +80,20 @@ def example_function(
 ## Project Structure
 
 ```
-spotim8/
-├── spotim8/              # Core library
-│   ├── client.py         # Main Spotim8 class
-│   ├── catalog.py        # Data caching
-│   └── ...
+SPOTIM8/
+├── src/                  # Core library
+│   ├── core/             # Core functionality
+│   │   ├── client.py     # Main Spotim8 class
+│   │   └── catalog.py     # Data caching
+│   ├── features/         # Feature engineering
+│   ├── analysis/         # Analysis utilities
+│   ├── data/             # Data handling modules
+│   ├── utils/            # Utility functions
 │   ├── notebooks/        # Jupyter notebooks for analysis
 │   └── scripts/          # Organized by category
 │       ├── automation/   # Sync & automation scripts
 │       ├── playlist/     # Playlist management scripts
+│       ├── common/       # Shared script utilities
 │       └── utils/        # Utility scripts
 ├── examples/             # Example code
 └── tests/                # Test suite
@@ -96,10 +101,10 @@ spotim8/
 
 ### Where to Add Code
 
-- **New Features**: Add to `spotim8/` module
-- **Scripts**: Add to appropriate subdirectory in `spotim8/scripts/`
+- **New Features**: Add to `src/` module
+- **Scripts**: Add to appropriate subdirectory in `src/scripts/`
 - **Examples**: Add to `examples/`
-- **Notebooks**: Add to `spotim8/notebooks/` (use descriptive names)
+- **Notebooks**: Add to `src/notebooks/` (use descriptive names)
 
 ## Testing
 

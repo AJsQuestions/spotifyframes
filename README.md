@@ -17,6 +17,10 @@ Turn your Spotify library into tidy DataFrames, analyze your listening habits, a
 - 💾 **Local Cache** - Parquet files for fast offline access
 - 🔄 **No Duplicates** - Smart deduplication on every run
 - 📊 **Enhanced Analysis** - 7 comprehensive Jupyter notebooks for deep insights
+- ✨ **Rich Playlist Descriptions** - Auto-generated descriptions with statistics, genres, and metadata
+- 🏥 **Health Checks** - Identify empty playlists, duplicates, and organizational issues
+- 🎨 **Playlist Organization** - Smart categorization and organization tools
+- 🛡️ **Production-Grade** - Robust error handling, logging, and monitoring
 
 ## 📋 Requirements
 
@@ -97,7 +101,7 @@ For automated runs without browser interaction:
 
 ```bash
 source venv/bin/activate
-python spotim8/scripts/utils/get_token.py
+python src/scripts/utils/get_token.py
 ```
 
 This will open your browser for Spotify authorization and generate a refresh token.
@@ -106,7 +110,7 @@ This will open your browser for Spotify authorization and generate a refresh tok
 
 ```bash
 # Sync your library (first time can take 1-2+ hours for large libraries)
-python spotim8/scripts/automation/sync.py
+python src/scripts/automation/sync.py
 ```
 
 ---
@@ -114,7 +118,7 @@ python spotim8/scripts/automation/sync.py
 ## 🔧 Python API
 
 ```python
-from spotim8 import Spotim8
+from src import Spotim8
 
 # Initialize client
 sf = Spotim8.from_env(progress=True)
@@ -174,19 +178,19 @@ The sync script and notebook `05_liked_songs_monthly_playlists.ipynb` create aut
 
 ```bash
 # Full sync + playlist update (default)
-python spotim8/scripts/automation/sync.py
+python src/scripts/automation/sync.py
 
 # Or use the helper script (handles environment variables)
-python spotim8/scripts/automation/runner.py
+python src/scripts/automation/runner.py
 
 # Skip sync, only update playlists (fast, uses existing data)
-python spotim8/scripts/automation/sync.py --skip-sync
+python src/scripts/automation/sync.py --skip-sync
 
 # Sync only, don't update playlists
-python spotim8/scripts/automation/sync.py --sync-only
+python src/scripts/automation/sync.py --sync-only
 
 # Process all months, not just current month
-python spotim8/scripts/automation/sync.py --all-months
+python src/scripts/automation/sync.py --all-months
 ```
 
 ### Scheduled Automation (Cron)
@@ -195,7 +199,7 @@ Set up daily sync on Linux/Mac:
 
 ```bash
 # Easy setup (recommended):
-./spotim8/scripts/automation/cron.sh
+./src/scripts/automation/cron.sh
 ```
 
 The cron job runs daily at 2:00 AM and logs to `logs/sync.log`.
@@ -210,12 +214,12 @@ The cron job runs daily at 2:00 AM and logs to `logs/sync.log`.
 **Manual setup** (if needed):
 ```bash
 crontab -e
-# Add: 0 2 * * * /bin/bash /path/to/spotim8/spotim8/scripts/automation/cron_wrapper.sh
+# Add: 0 2 * * * /bin/bash /path/to/SPOTIM8/src/scripts/automation/cron_wrapper.sh
 ```
 
 **Test the wrapper manually:**
 ```bash
-/bin/bash spotim8/scripts/automation/cron_wrapper.sh --skip-sync
+/bin/bash src/scripts/automation/cron_wrapper.sh --skip-sync
 ```
 
 ### Email Notifications
@@ -291,20 +295,26 @@ For more advanced operations, use the Python API or scripts directly.
 ## 📂 Project Structure
 
 ```
-spotim8/
-├── spotim8/                      # Core Python library
-│   ├── client.py                 # Main Spotim8 class (entry point)
-│   ├── catalog.py                # Data caching layer (parquet storage)
-│   ├── cli.py                    # Command line interface
-│   ├── features.py               # Feature engineering utilities
-│   ├── genres.py                 # Genre classification rules
-│   ├── genre_inference.py        # Genre inference engine
-│   ├── analysis.py               # Library analysis utilities
-│   ├── streaming_history.py      # Streaming history integration (v2.0+)
-│   ├── market.py                 # Market data (browse/search)
-│   ├── export.py                 # Data export utilities
-│   ├── ratelimit.py              # Rate limiting utilities
-│   ├── utils.py                  # Helper functions
+SPOTIM8/
+├── src/                          # Core Python package
+│   ├── __init__.py               # Package exports
+│   ├── core/                     # Core functionality
+│   │   ├── client.py             # Main Spotim8 class (entry point)
+│   │   ├── catalog.py            # Data caching layer (parquet storage)
+│   │   └── cli.py                # Command line interface
+│   ├── features/                 # Feature engineering
+│   │   ├── features.py           # Feature engineering utilities
+│   │   ├── genres.py             # Genre classification rules
+│   │   └── genre_inference.py    # Genre inference engine
+│   ├── analysis/                 # Analysis utilities
+│   │   ├── analysis.py           # Library analysis utilities
+│   │   └── streaming_history.py  # Streaming history integration
+│   ├── data/                     # Data handling modules
+│   │   ├── export.py             # Data export utilities
+│   │   └── market.py             # Market data (browse/search)
+│   ├── utils/                    # Utility functions
+│   │   ├── ratelimit.py          # Rate limiting utilities
+│   │   └── utils.py              # Helper functions
 │   ├── notebooks/                # Jupyter notebooks for analysis
 │   │   ├── 01_sync_data.ipynb        # Sync library data & streaming history
 │   │   ├── 02_analyze_library.ipynb  # Visualize listening habits
@@ -314,7 +324,7 @@ spotim8/
 │   │   ├── 06_identify_redundant_playlists.ipynb # Find similar playlists
 │   │   ├── 07_analyze_crashes.ipynb  # Technical log analysis
 │   │   └── notebook_helpers.py       # Shared notebook utilities
-│   └── scripts/                  # Scripts organized by category (v3.0+)
+│   └── scripts/                  # Scripts organized by category
 │       ├── automation/           # Automation and sync scripts
 │       │   ├── sync.py           # Main sync & playlist update script
 │       │   ├── runner.py         # Local sync runner wrapper
@@ -330,6 +340,10 @@ spotim8/
 │       │   ├── add_genre_tags_to_descriptions.py # Add genre tags
 │       │   ├── update_all_playlist_descriptions.py # Update descriptions
 │       │   └── playlist_helpers.py   # Shared playlist utilities
+│       ├── common/                # Shared script utilities
+│       │   ├── project_path.py   # Project root path utilities
+│       │   ├── sync_helpers.py   # Sync helper functions
+│       │   └── setup.py          # Script setup utilities
 │       └── utils/                # Utility scripts
 │           ├── get_token.py      # Get refresh token for automation
 │           └── setup.py          # Initial setup helper
@@ -341,8 +355,8 @@ spotim8/
 │   ├── test_client.py            # Client tests
 │   └── test_import.py            # Import tests
 │
-├── data/                         # Cached parquet files (gitignored)
-│   ├── *.parquet                 # Library data cache
+├── data/                         # Cached parquet files (gitignored, user data)
+│   ├── *.parquet                 # Library data cache (playlists, tracks, artists, etc.)
 │   └── Spotify Account Data/     # Spotify export data (gitignored)
 │
 ├── logs/                         # Log files (gitignored)
@@ -358,13 +372,20 @@ spotim8/
 
 ### Key Directories
 
-- **`spotim8/`**: Core library - main Python package
-- **`spotim8/notebooks/`**: Analysis notebooks - run sequentially for full workflow
-- **`spotim8/scripts/automation/`**: Sync and automation - daily cron jobs
-- **`spotim8/scripts/playlist/`**: Playlist management - merge, delete, update playlists
-- **`spotim8/scripts/utils/`**: Utilities - token setup, project setup
+- **`src/`**: Core library - main Python package (import as `from src import ...`)
+- **`src/core/`**: Core functionality - client, catalog, CLI
+- **`src/features/`**: Feature engineering - genres, inference
+- **`src/analysis/`**: Analysis utilities - library analysis, streaming history
+- **`src/data/`**: Data handling modules - export, market data
+- **`src/utils/`**: Utility functions - rate limiting, helpers
+- **`src/notebooks/`**: Analysis notebooks - run sequentially for full workflow
+- **`src/scripts/automation/`**: Sync and automation - daily cron jobs
+- **`src/scripts/playlist/`**: Playlist management - merge, delete, update playlists
+- **`src/scripts/common/`**: Shared script utilities - path helpers, sync helpers
+- **`src/scripts/utils/`**: Utility scripts - token setup, project setup
 - **`examples/`**: Code examples - quick start templates
 - **`tests/`**: Test suite - unit and integration tests
+- **`data/`**: User data directory (gitignored) - synced library data, parquet files
 
 ---
 
@@ -387,7 +408,7 @@ Make sure your `.env` file exists and has:
 ### Authentication Issues
 
 1. Make sure your redirect URI matches exactly: `http://127.0.0.1:8888/callback`
-2. Get a fresh refresh token: `python spotim8/scripts/utils/get_token.py`
+2. Get a fresh refresh token: `python src/scripts/utils/get_token.py`
 3. Check that your Spotify app is not in "Development Mode" with restricted users (if using a free account)
 
 ### Sync Takes Too Long
@@ -395,7 +416,7 @@ Make sure your `.env` file exists and has:
 - First sync always takes longest (hours for large libraries)
 - Use `--skip-sync` to only update playlists without re-syncing:
   ```bash
-  python spotim8/scripts/automation/runner.py --skip-sync
+  python src/scripts/automation/runner.py --skip-sync
   ```
 
 ### Check Logs

@@ -19,14 +19,14 @@ notebook = ["jupyter>=1.0", "matplotlib>=3.8", "seaborn>=0.13", "plotly>=5.18"]
 all = ["spotim8[dev,notebook]"]
 
 [project.scripts]
-spotim8 = "spotim8.core.cli:main"
+spotim8 = "src.core.cli:main"
 
 [build-system]
 requires = ["setuptools>=69"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
-include = ["spotim8*"]
+include = ["src*"]
 
 [tool.ruff]
 line-length = 100

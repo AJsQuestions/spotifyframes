@@ -5,28 +5,28 @@ import pytest
 
 def test_import_main():
     """Test importing main module."""
-    import spotim8
-    assert hasattr(spotim8, 'Spotim8')
-    assert hasattr(spotim8, '__version__')
+    import src
+    assert hasattr(src, 'Spotim8')
+    assert hasattr(src, '__version__')
 
 
 def test_import_client():
     """Test importing from client."""
-    from spotim8 import Spotim8, LIKED_SONGS_PLAYLIST_ID, LIKED_SONGS_PLAYLIST_NAME
+    from src import Spotim8, LIKED_SONGS_PLAYLIST_ID, LIKED_SONGS_PLAYLIST_NAME
     assert Spotim8 is not None
     assert LIKED_SONGS_PLAYLIST_ID == "__liked_songs__"
 
 
 def test_import_catalog():
     """Test importing catalog classes."""
-    from spotim8 import CacheConfig, DataCatalog
+    from src import CacheConfig, DataCatalog
     assert CacheConfig is not None
     assert DataCatalog is not None
 
 
 def test_import_features():
     """Test importing feature functions."""
-    from spotim8 import (
+    from src import (
         playlist_profile_features,
         artist_concentration_features,
         time_features,
@@ -46,7 +46,7 @@ def test_import_features():
 
 def test_import_ratelimit():
     """Test importing rate limiting utilities."""
-    from spotim8.ratelimit import (
+    from src.utils.ratelimit import (
         rate_limited_call,
         RateLimitError,
         DEFAULT_REQUEST_DELAY,
@@ -58,5 +58,5 @@ def test_import_ratelimit():
 
 def test_import_market():
     """Test importing market module."""
-    from spotim8.market import MarketFrames
+    from src.data.market import MarketFrames
     assert MarketFrames is not None
