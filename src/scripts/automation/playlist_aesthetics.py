@@ -163,6 +163,10 @@ def format_rich_description(
     # Combine sections
     description = "\n".join(sections)
     
+    # Sanitize: remove control characters (keep newlines and tabs)
+    import re
+    description = re.sub(r'[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F]', '', description)
+    
     # Truncate if needed (Spotify limit is 300 characters)
     if len(description) > MAX_LENGTH:
         # Try to preserve base description and stats, truncate genre tags
@@ -184,6 +188,12 @@ def format_rich_description(
     # Final safety check - ensure we never exceed limit
     if len(description) > MAX_LENGTH:
         description = description[:MAX_LENGTH]
+    
+    # Ensure valid UTF-8 encoding
+    try:
+        description = description.encode('utf-8', errors='ignore').decode('utf-8')
+    except:
+        pass  # If encoding fails, description is already a string
     
     return description
 

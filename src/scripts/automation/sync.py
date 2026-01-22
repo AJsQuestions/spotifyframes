@@ -801,8 +801,20 @@ def _update_playlist_description_with_genres(sp: spotipy.Spotify, user_id: str, 
         else:
             new_description = genre_description
         
-        # Validate and truncate description to Spotify's 300 character limit
+        # Sanitize and validate description
         MAX_DESCRIPTION_LENGTH = 300
+        
+        # Ensure description is a string and not None
+        if new_description is None:
+            new_description = ""
+        new_description = str(new_description)
+        
+        # Remove invalid characters (control characters, but keep newlines and tabs)
+        import re
+        # Keep printable characters, newlines, tabs, and common Unicode
+        new_description = re.sub(r'[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F]', '', new_description)
+        
+        # Truncate to Spotify's 300 character limit
         if len(new_description) > MAX_DESCRIPTION_LENGTH:
             verbose_log(f"  Warning: Description for '{playlist_name}' is {len(new_description)} chars, truncating to {MAX_DESCRIPTION_LENGTH}")
             # Truncate intelligently - try to preserve important parts
@@ -810,30 +822,60 @@ def _update_playlist_description_with_genres(sp: spotipy.Spotify, user_id: str, 
                 # Try to keep first line (base description) and truncate rest
                 lines = new_description.split("\n")
                 if len(lines[0]) <= MAX_DESCRIPTION_LENGTH - 10:
-                    new_description = lines[0] + "\n" + "\n".join(lines[1:])[:MAX_DESCRIPTION_LENGTH - len(lines[0]) - 5] + "..."
+                    remaining = MAX_DESCRIPTION_LENGTH - len(lines[0]) - 5
+                    rest = "\n".join(lines[1:])
+                    if len(rest) > remaining:
+                        rest = rest[:remaining] + "..."
+                    new_description = lines[0] + "\n" + rest
                 else:
                     new_description = new_description[:MAX_DESCRIPTION_LENGTH - 3] + "..."
             else:
                 new_description = new_description[:MAX_DESCRIPTION_LENGTH - 3] + "..."
         
-        # Final safety check
+        # Final safety check - ensure we never exceed limit
         if len(new_description) > MAX_DESCRIPTION_LENGTH:
             new_description = new_description[:MAX_DESCRIPTION_LENGTH]
+        
+        # Ensure description is not empty (Spotify might reject empty descriptions)
+        if not new_description.strip():
+            verbose_log(f"  Skipping description update for '{playlist_name}' (description would be empty)")
+            return False
         
         # Only update if changed
         if new_description != current_description:
             try:
+                # Additional validation: ensure description is valid UTF-8
+                new_description.encode('utf-8')
+                
                 api_call(
                     sp.user_playlist_change_details,
                     user_id,
                     playlist_id,
                     description=new_description
                 )
-                verbose_log(f"  Updated description for playlist '{playlist_name}' ({len(new_description)} chars)")
+                verbose_log(f"  ✅ Updated description for playlist '{playlist_name}' ({len(new_description)} chars)")
                 return True
+            except UnicodeEncodeError as e:
+                verbose_log(f"  ⚠️  Invalid encoding in description for '{playlist_name}': {e}")
+                # Try to fix encoding issues
+                try:
+                    new_description = new_description.encode('utf-8', errors='ignore').decode('utf-8')
+                    api_call(
+                        sp.user_playlist_change_details,
+                        user_id,
+                        playlist_id,
+                        description=new_description
+                    )
+                    verbose_log(f"  ✅ Updated description for playlist '{playlist_name}' after encoding fix ({len(new_description)} chars)")
+                    return True
+                except Exception as e2:
+                    verbose_log(f"  ❌ Failed to update description after encoding fix: {e2}")
+                    return False
             except Exception as api_error:
-                verbose_log(f"  Failed to update description via API: {api_error}")
+                verbose_log(f"  ❌ Failed to update description via API: {api_error}")
                 verbose_log(f"  Description length: {len(new_description)}, preview: {new_description[:100]}...")
+                # Log first 200 chars for debugging
+                verbose_log(f"  Full description (first 200 chars): {repr(new_description[:200])}")
                 return False
         return False
     except Exception as e:
