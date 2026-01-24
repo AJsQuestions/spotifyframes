@@ -431,6 +431,19 @@ def _remove_genre_from_track(tracks_df: pd.DataFrame, track_uri: str, genre_to_r
 
 
 def update_master_genre_playlists(sp: spotipy.Spotify) -> None:
+    """
+    Update master genre playlists with tracks from liked songs.
+    
+    Creates or updates playlists for each broad genre (Hip-Hop, R&B/Soul, etc.)
+    based on artist genres. Only uses actual Spotify artist genres, filtering out
+    previously inferred genres to prevent false matches.
+    
+    Args:
+        sp: Authenticated Spotify client
+    
+    Returns:
+        None
+    """
     """Update master genre playlists with all liked songs by genre.
     
     When tracks are manually removed from genre master playlists, removes
@@ -563,9 +576,10 @@ def update_master_genre_playlists(sp: spotipy.Spotify) -> None:
     # First, get all genres that meet the threshold
     selected = [g for g, n in top_genres_all if n >= adaptive_threshold]
     
-    # If we have very few genres, also include top genres even if below threshold (but at least 5 tracks)
+    # If we have very few genres, also include top genres even if below threshold
     if len(selected) < 3 and len(top_genres_all) > 0:
-        min_fallback = max(5, int(adaptive_threshold * 0.3))  # At least 30% of threshold, minimum 5
+        from .config import GENRE_MIN_TRACKS_FALLBACK, GENRE_FALLBACK_PERCENT
+        min_fallback = max(GENRE_MIN_TRACKS_FALLBACK, int(adaptive_threshold * GENRE_FALLBACK_PERCENT))
         additional = [g for g, n in top_genres_all[:5] if n >= min_fallback and g not in selected]
         selected.extend(additional)
         verbose_log(f"  Added {len(additional)} genre(s) below threshold to ensure diversity (min {min_fallback} tracks)")

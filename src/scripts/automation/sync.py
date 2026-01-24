@@ -98,8 +98,9 @@ except ImportError:
     DOTENV_AVAILABLE = False
 
 # Adaptive backoff multiplier (increases after rate errors, decays on success)
-_RATE_BACKOFF_MULTIPLIER = 1.0
-_RATE_BACKOFF_MAX = 16.0
+# Use constants from config, but allow runtime adjustment
+_RATE_BACKOFF_MULTIPLIER = API_RATE_LIMIT_BACKOFF_MULTIPLIER
+_RATE_BACKOFF_MAX = 16.0  # Maximum backoff multiplier
 
 # Add project root to path
 # Calculate from file: src/scripts/automation/sync.py -> 4 levels up to project root
@@ -366,9 +367,9 @@ def api_call(fn, *args, max_retries: int = 6, backoff_factor: float = 1.0, **kwa
             result = fn(*args, **kwargs)
             # Adaptive short delay between successful calls to avoid bursting the API
             try:
-                base_delay = float(os.environ.get("SPOTIFY_API_DELAY", "0.15"))
+                base_delay = float(os.environ.get("SPOTIFY_API_DELAY", str(API_RATE_LIMIT_DELAY)))
             except Exception:
-                base_delay = 0.15
+                base_delay = API_RATE_LIMIT_DELAY
             # Multiply by adaptive multiplier (increases when we hit rate limits)
             delay = base_delay * _RATE_BACKOFF_MULTIPLIER
             if delay and delay > 0:
@@ -1446,7 +1447,7 @@ def compute_track_genres_incremental(stats: dict = None) -> None:
         
         # Use parallel processing for genre inference (major performance boost)
         num_workers = int(os.environ.get("GENRE_INFERENCE_WORKERS", min(mp.cpu_count() or 4, 8)))
-        use_parallel = _parse_bool_env("USE_PARALLEL_GENRE_INFERENCE", True) and len(tracks_to_process) > 50
+        use_parallel = _parse_bool_env("USE_PARALLEL_GENRE_INFERENCE", True) and len(tracks_to_process) > PARALLEL_MIN_TRACKS
         
         # Prepare track data list for processing
         track_data_list = [

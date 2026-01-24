@@ -17,8 +17,8 @@ This document outlines the systematic refactoring of the SpotiM8 codebase to imp
 - Migrate all env var parsing to use centralized helpers
 - Remove duplicate `_parse_bool_env` from `sync.py`
 
-### 2. Logging Standardization
-**Status**: Pending
+### 2. Logging Standardization ✅
+**Status**: Completed
 **Issues**:
 - Inconsistent logging: `log()`, `verbose_log()`, `print()`, `logging.getLogger()`
 - No unified logging interface
@@ -42,8 +42,8 @@ This document outlines the systematic refactoring of the SpotiM8 codebase to imp
 - Use `typing` module for complex types
 - Add type checking with mypy (optional)
 
-### 4. Constants Extraction
-**Status**: Pending
+### 4. Constants Extraction ✅
+**Status**: Completed
 **Issues**:
 - Magic numbers scattered throughout code
 - Hard-coded strings
