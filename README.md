@@ -232,6 +232,8 @@ Set up daily sync on Linux/Mac:
 
 The cron job runs daily at 2:00 AM and logs to `logs/sync.log`.
 
+See [docs/features/automation.md](docs/features/automation.md) for detailed automation setup and troubleshooting.
+
 **Features:**
 - ✅ Automatic log rotation (keeps last 3 backups)
 - ✅ Prevents concurrent runs with lock file mechanism
@@ -391,8 +393,11 @@ SPOTIM8/
 │   └── sync.log                  # Sync operation logs
 │
 ├── README.md                     # This file - main documentation
-├── CONTRIBUTING.md               # Contribution guidelines
-├── CHANGELOG.md                  # Version history
+├── docs/                         # Detailed documentation
+│   ├── getting-started/         # Installation and setup guides
+│   ├── features/                 # Feature documentation
+│   ├── development/              # Development guides
+│   └── reference/                # Reference documentation
 ├── LICENSE                       # MIT License
 ├── pyproject.toml                # Project configuration
 └── env.example                   # Environment variables template
@@ -469,7 +474,7 @@ tail -f logs/sync.log
 
 Thank you for your interest in contributing to Spotim8!
 
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines on:
+We welcome contributions! Please see [docs/development/contributing.md](docs/development/contributing.md) for detailed guidelines on:
 - Development setup
 - Code style and standards
 - Testing requirements
