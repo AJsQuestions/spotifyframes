@@ -12,8 +12,10 @@ import pandas as pd
 from datetime import datetime
 
 from .formatting import format_playlist_name, format_playlist_description
-from src.features.genres import get_all_split_genres, get_all_broad_genres, SPLIT_GENRES
+from src.features.genres import get_all_split_genres, get_all_broad_genres, get_broad_genre, SPLIT_GENRES, ALL_BROAD_GENRES
+from .error_handling import handle_errors
 
+@handle_errors(reraise=False, default_return={}, log_error=True)
 def update_monthly_playlists(sp: spotipy.Spotify, keep_last_n_months: int = 3) -> dict:
     """Update monthly playlists for all types (Finds, Discover).
     
@@ -274,6 +276,7 @@ def update_monthly_playlists(sp: spotipy.Spotify, keep_last_n_months: int = 3) -
 
 
 
+@handle_errors(reraise=False, default_return=None, log_error=True)
 def update_genre_split_playlists(sp: spotipy.Spotify, month_to_tracks: dict) -> None:
     """Update genre-split monthly playlists (HipHop, Dance, Other).
     
@@ -430,13 +433,20 @@ def _remove_genre_from_track(tracks_df: pd.DataFrame, track_uri: str, genre_to_r
     return False
 
 
+@handle_errors(reraise=False, default_return=None, log_error=True)
 def update_master_genre_playlists(sp: spotipy.Spotify) -> None:
     """
     Update master genre playlists with tracks from liked songs.
     
-    Creates or updates playlists for each broad genre (Hip-Hop, R&B/Soul, etc.)
-    based on artist genres. Only uses actual Spotify artist genres, filtering out
-    previously inferred genres to prevent false matches.
+    Runs on every sync and updates the partition incrementally:
+    - New liked songs are categorized (using artist + track genres) and assigned to
+      exactly one master genre playlist (or "Other" if unclassified).
+    - Tracks that are no longer liked are removed from genre playlists so the
+      partition stays in sync with the current liked library.
+    
+    Creates EXHAUSTIVE playlists that partition the entire library of liked songs
+    by genre. Every liked song is in exactly one playlist; unliked tracks are
+    removed so the partition reflects current likes only.
     
     Args:
         sp: Authenticated Spotify client
@@ -444,21 +454,16 @@ def update_master_genre_playlists(sp: spotipy.Spotify) -> None:
     Returns:
         None
     """
-    """Update master genre playlists with all liked songs by genre.
-    
-    When tracks are manually removed from genre master playlists, removes
-    the corresponding genre tags from the track's stored genres.
-    """
     # Late imports from sync.py
     from .sync import (
         log, verbose_log, DATA_DIR, ENABLE_MONTHLY, ENABLE_MOST_PLAYED, ENABLE_DISCOVERY,
-        LIKED_SONGS_PLAYLIST_ID, GENRE_NAME_TEMPLATE, MAX_GENRE_PLAYLISTS, MIN_TRACKS_FOR_GENRE,
+        LIKED_SONGS_PLAYLIST_ID, GENRE_NAME_TEMPLATE,
         get_existing_playlists, get_user_info, get_playlist_tracks, api_call,
         _chunked, _update_playlist_description_with_genres, _playlist_tracks_cache,
-        _parse_genres, _get_all_track_genres
+        _parse_genres, _get_all_track_genres, _get_primary_artist_genres, _invalidate_playlist_cache
     )
     from collections import Counter
-    log("\n--- Master Genre Playlists ---")
+    log("\n--- Master Genre Playlists (Exhaustive Partitioning) ---")
     
     # Load data
     library = pd.read_parquet(DATA_DIR / "playlist_tracks.parquet")
@@ -469,135 +474,122 @@ def update_master_genre_playlists(sp: spotipy.Spotify) -> None:
     liked = library[library["playlist_id"].astype(str) == LIKED_SONGS_PLAYLIST_ID]
     liked_ids = set(liked["track_id"])
     
-    # Build URIs
+    # Build URIs - ensure we have a set for fast lookup
     if "track_uri" in liked.columns:
-        liked_uris = liked["track_uri"].dropna().tolist()
+        liked_uris = set(liked["track_uri"].dropna().tolist())
+        liked_uris_list = list(liked_uris)  # Keep list version for iteration
     else:
-        liked_uris = [f"spotify:track:{tid}" for tid in liked_ids]
+        liked_uris_list = [f"spotify:track:{tid}" for tid in liked_ids]
+        liked_uris = set(liked_uris_list)
     
     # Build genre mapping - tracks can have MULTIPLE broad genres
-    # Use ONLY artist genres (most reliable) - stored track genres are split genres, not useful for broad classification
-    # Playlist pattern inference is disabled because it's too noisy and causes false positives
+    # Use ONLY actual Spotify artist genres (lowercase, specific) - NO inferred genres
+    # Stored track genres are split genres, not useful for broad classification
     uri_to_genres = {}  # Map URI to list of broad genres
     tracks_df = pd.read_parquet(DATA_DIR / "tracks.parquet")
     
     # Build artist genres map for fast lookup
     artist_genres_map = artists.set_index("artist_id")["genres"].to_dict()
     
-    verbose_log(f"  Classifying genres for {len(liked_ids)} liked tracks using artist genres only...")
+    verbose_log(f"  Classifying genres for {len(liked_ids)} liked tracks (primary artist only for even distribution)...")
     
     # Count tracks with artist genres for debugging
     tracks_with_artist_genres = 0
     tracks_with_broad_genres = 0
     
-    # Use ONLY artist genres (most reliable source)
-    # Note: Stored track genres are split genres (HipHop/Dance/Other), not artist genres
-    # We need actual artist genres from Spotify to map to broad genres correctly
+    # Partition by PRIMARY ARTIST's genre only: one broad genre per track for even distribution.
+    # Using all artists caused most tracks to match Hip-Hop first and pile into one playlist.
     for track_id in liked_ids:
         uri = f"spotify:track:{track_id}"
         
-        # Get all genres from all artists on this track
-        all_track_genres = _get_all_track_genres(track_id, track_artists, artist_genres_map)
+        # Primary artist's genres only (first artist on the track)
+        primary_genres = _get_primary_artist_genres(track_id, track_artists, artist_genres_map)
         
-        # Filter out inferred genres (capitalized like "Dance", "HipHop", "R&B/Soul")
-        # These are NOT actual Spotify artist genres - they're previously inferred genres
-        # Actual Spotify genres are lowercase and specific (e.g., "contemporary r&b", "trap", "house")
-        actual_spotify_genres = []
-        for genre in all_track_genres:
-            genre_str = str(genre).strip()
-            # Skip if it looks like an inferred genre (capitalized broad categories)
-            if genre_str in ['Dance', 'HipHop', 'Other', 'R&B/Soul', 'Hip-Hop', 'Electronic', 
-                           'Rock', 'Pop', 'Jazz', 'Classical', 'Country/Folk', 'Metal', 
-                           'Indie', 'Latin', 'World', 'Blues']:
-                continue  # Skip inferred genres
-            # Only use actual Spotify genres (lowercase, specific)
-            if genre_str and genre_str.lower() == genre_str:
-                actual_spotify_genres.append(genre_str)
+        # Fallback: if primary has no genres, use stored track genres
+        if not primary_genres and "genres" in tracks_df.columns:
+            track_row = tracks_df[tracks_df["track_id"] == track_id]
+            if not track_row.empty:
+                stored = track_row["genres"].iloc[0]
+                if stored is not None and (isinstance(stored, list) and stored or isinstance(stored, str) and str(stored).strip()):
+                    primary_genres = [str(g).strip() for g in (stored if isinstance(stored, list) else [stored])]
         
-        if actual_spotify_genres:
+        if primary_genres:
             tracks_with_artist_genres += 1
         
-        # Convert to broad genres using strict word boundary matching
-        # Only use actual Spotify artist genres, not inferred ones
-        broad_genres = get_all_broad_genres(actual_spotify_genres)
-        
-        if broad_genres:
-            uri_to_genres[uri] = broad_genres
+        # Map to exactly one broad genre (first match in GENRE_RULES order)
+        broad_genre = get_broad_genre(primary_genres)
+        if broad_genre:
+            uri_to_genres[uri] = [broad_genre]
             tracks_with_broad_genres += 1
     
     verbose_log(f"  Tracks with artist genres: {tracks_with_artist_genres}/{len(liked_ids)} ({tracks_with_artist_genres/len(liked_ids)*100:.1f}%)")
     verbose_log(f"  Tracks with broad genres assigned: {tracks_with_broad_genres}/{len(liked_ids)} ({tracks_with_broad_genres/len(liked_ids)*100:.1f}%)")
     
-    verbose_log(f"  Classified genres for {len(uri_to_genres)}/{len(liked_ids)} tracks ({len(uri_to_genres)/len(liked_ids)*100:.1f}%)")
+    # Identify tracks without genre classification (for "Other" playlist)
+    tracks_without_genres = liked_uris - set(uri_to_genres.keys())
+    verbose_log(f"  Tracks without genre classification: {len(tracks_without_genres)} ({len(tracks_without_genres)/len(liked_uris)*100:.1f}%)")
     
     # Debug: Check a sample of tracks to see what genres they're getting
     if verbose_log and len(uri_to_genres) > 0:
         sample_tracks = list(uri_to_genres.items())[:10]
-        verbose_log(f"  Sample track genres (first 10):")
+        verbose_log(f"  Sample track genres (primary artist, first 10):")
         for uri, genres in sample_tracks:
             track_id = uri.replace("spotify:track:", "")
             track_row = tracks_df[tracks_df["track_id"] == track_id]
             track_name = track_row["name"].iloc[0] if not track_row.empty else "Unknown"
-            # Get artist genres for this track
-            all_track_genres = _get_all_track_genres(track_id, track_artists, artist_genres_map)
-            verbose_log(f"    {track_name[:50]}: artist={all_track_genres[:5]}, broad={genres}")
+            primary_genres = _get_primary_artist_genres(track_id, track_artists, artist_genres_map)
+            verbose_log(f"    {track_name[:50]}: primary_artist_genres={primary_genres[:5]}, broad={genres}")
     
-    # Count tracks per genre (tracks can contribute to multiple genres)
+    # PARTITION APPROACH: Assign each track to exactly ONE playlist
+    # If a track matches multiple genres, assign to the first in a fixed intuitive order
+    # (GENRE_RULES order: Hip-Hop > R&B/Soul > Electronic > Rock > ... > Other)
     genre_counts = Counter()
     for genres_list in uri_to_genres.values():
         for genre in genres_list:
             genre_counts[genre] += 1
     
+    # Fixed priority order (same as GENRE_RULES): only include genres that have tracks
+    # "Other" is always last (catch-all for unclassified tracks)
+    all_genres_with_tracks = [g for g in ALL_BROAD_GENRES if genre_counts.get(g, 0) > 0]
+    if tracks_without_genres:
+        all_genres_with_tracks.append("Other")
+    
+    # Assign each track to exactly ONE genre (first matching genre in priority order)
+    uri_to_single_genre = {}  # Map URI to single assigned genre
+    for uri, genres_list in uri_to_genres.items():
+        if genres_list:
+            # Assign to the highest priority genre (first in sorted list that track matches)
+            for genre in all_genres_with_tracks:
+                if genre in genres_list:
+                    uri_to_single_genre[uri] = genre
+                    break
+    
+    # Recalculate genre counts based on single assignments
+    genre_counts_single = Counter(uri_to_single_genre.values())
+    
     # Log genre distribution for debugging
     if verbose_log:
-        verbose_log(f"  Genre distribution (top 15): {dict(genre_counts.most_common(15))}")
+        verbose_log(f"  Genre distribution (all {len(all_genres_with_tracks)} genres): {dict(genre_counts.most_common())}")
         verbose_log(f"  Total liked tracks: {len(liked_uris)}, tracks with genres: {len(uri_to_genres)}")
         verbose_log(f"  Genre coverage: {len(uri_to_genres)/len(liked_uris)*100:.1f}% of tracks have genres")
         
-        # Show breakdown by genre count
+        # Show breakdown by genre count (before single assignment)
         genre_size_distribution = Counter()
         for genres_list in uri_to_genres.values():
             genre_size_distribution[len(genres_list)] += 1
-        verbose_log(f"  Tracks by genre count: {dict(sorted(genre_size_distribution.items()))}")
+        verbose_log(f"  Tracks by genre count (before partition): {dict(sorted(genre_size_distribution.items()))}")
+        
+        # Show how many tracks were reassigned due to multiple genre matches
+        tracks_with_multiple = sum(1 for genres_list in uri_to_genres.values() if len(genres_list) > 1)
+        if tracks_with_multiple > 0:
+            verbose_log(f"  Tracks matching multiple genres: {tracks_with_multiple} (assigned to highest priority genre)")
     
-    # Adaptive threshold: use percentage-based threshold if absolute threshold is too restrictive
-    total_tracks_with_genres = len(uri_to_genres)
-    if total_tracks_with_genres > 0:
-        # Use 1% of tracks as minimum, but not less than 10 tracks
-        adaptive_threshold = max(MIN_TRACKS_FOR_GENRE, int(total_tracks_with_genres * 0.01))
-        adaptive_threshold = min(adaptive_threshold, 50)  # Cap at 50 to avoid too many small playlists
-    else:
-        adaptive_threshold = MIN_TRACKS_FOR_GENRE
-    
-    # Select genres: use adaptive threshold, but also include top genres even if below threshold
-    # This ensures we capture diverse genres even if they're smaller
-    top_genres_all = genre_counts.most_common(MAX_GENRE_PLAYLISTS)
-    
-    # First, get all genres that meet the threshold
-    selected = [g for g, n in top_genres_all if n >= adaptive_threshold]
-    
-    # If we have very few genres, also include top genres even if below threshold
-    if len(selected) < 3 and len(top_genres_all) > 0:
-        from .config import GENRE_MIN_TRACKS_FALLBACK, GENRE_FALLBACK_PERCENT
-        min_fallback = max(GENRE_MIN_TRACKS_FALLBACK, int(adaptive_threshold * GENRE_FALLBACK_PERCENT))
-        additional = [g for g, n in top_genres_all[:5] if n >= min_fallback and g not in selected]
-        selected.extend(additional)
-        verbose_log(f"  Added {len(additional)} genre(s) below threshold to ensure diversity (min {min_fallback} tracks)")
-    
-    if total_tracks_with_genres > 0:
-        threshold_pct = (adaptive_threshold / total_tracks_with_genres * 100)
-        log(f"  Found {len(selected)} genre(s) (threshold: {adaptive_threshold} tracks, {threshold_pct:.1f}% of library)")
-    else:
-        log(f"  Found {len(selected)} genre(s) (threshold: {adaptive_threshold} tracks)")
-    if selected:
-        for genre in selected:
-            count = genre_counts[genre]
-            pct = (count / total_tracks_with_genres * 100) if total_tracks_with_genres > 0 else 0
+    log(f"  Creating playlists for {len(all_genres_with_tracks)} genre(s) (unique partition - each track in exactly one playlist)")
+    if all_genres_with_tracks:
+        for genre in all_genres_with_tracks:
+            count = genre_counts_single.get(genre, len(tracks_without_genres) if genre == "Other" else 0)
+            pct = (count / len(liked_uris) * 100) if len(liked_uris) > 0 else 0
             log(f"    • {genre}: {count} tracks ({pct:.1f}%)")
-    else:
-        verbose_log(f"  No genres meet the minimum threshold of {adaptive_threshold} tracks")
-        verbose_log(f"  Top genres: {dict(genre_counts.most_common(10))}")
-        verbose_log(f"  Consider lowering MIN_TRACKS_FOR_GENRE or improving genre classification")
     
     # Get existing playlists (cached)
     existing = get_existing_playlists(sp)
@@ -611,7 +603,9 @@ def update_master_genre_playlists(sp: spotipy.Spotify) -> None:
     # This allows us to compare what was in the playlist before vs now
     previous_playlist_tracks = {}  # {playlist_id: set of track URIs}
     if "playlist_id" in library.columns and "track_uri" in library.columns:
-        for genre in selected:
+        # Check all genres (including "Other")
+        genres_to_check = all_genres_with_tracks + (["Other"] if tracks_without_genres else [])
+        for genre in genres_to_check:
             name = format_playlist_name(GENRE_NAME_TEMPLATE, genre=genre, playlist_type="genre_master")
             if name in existing:
                 pid = existing[name]
@@ -621,12 +615,17 @@ def update_master_genre_playlists(sp: spotipy.Spotify) -> None:
                     previous_tracks = set(playlist_tracks_data["track_uri"].dropna().tolist())
                     previous_playlist_tracks[pid] = previous_tracks
     
-    for genre in selected:
-        # Get all tracks that match this genre (tracks can match multiple genres)
-        uris_should_be_in_playlist = set([u for u in liked_uris if genre in uri_to_genres.get(u, [])])
+    # Track which tracks are assigned to playlists (for validation)
+    tracks_assigned_to_playlists = set()
+    
+    # Process all genre playlists (unique partition - each track in exactly one playlist)
+    for genre in all_genres_with_tracks:
+        # Get tracks assigned to THIS genre (single assignment, no duplicates)
+        uris_should_be_in_playlist = set([u for u in liked_uris if uri_to_single_genre.get(u) == genre])
         if not uris_should_be_in_playlist:
-            continue
+            continue  # Skip if no tracks assigned to this genre
         
+        tracks_assigned_to_playlists.update(uris_should_be_in_playlist)
         name = format_playlist_name(GENRE_NAME_TEMPLATE, genre=genre, playlist_type="genre_master")
         
         if name in existing:
@@ -634,15 +633,20 @@ def update_master_genre_playlists(sp: spotipy.Spotify) -> None:
             # Get existing tracks (includes both auto-added and manually added tracks)
             already_in_playlist = get_playlist_tracks(sp, pid)
             
-            # Remove tracks that don't match the genre (only for liked songs, preserve manually added non-liked tracks)
+            # Remove tracks that shouldn't be in this playlist (keep partition in sync with liked songs)
+            # 1. Tracks no longer liked -> remove from partition
+            # 2. Liked tracks assigned to a different genre -> move to correct playlist
             tracks_to_remove = []
             for track_uri in already_in_playlist:
-                # Only remove if it's a liked song and doesn't match the genre
-                if track_uri in liked_uris and track_uri not in uris_should_be_in_playlist:
-                    tracks_to_remove.append(track_uri)
+                if track_uri not in liked_uris:
+                    tracks_to_remove.append(track_uri)  # No longer liked
+                else:
+                    assigned_genre = uri_to_single_genre.get(track_uri)
+                    if assigned_genre != genre:
+                        tracks_to_remove.append(track_uri)  # Wrong genre playlist
             
             if tracks_to_remove:
-                log(f"  {name}: Removing {len(tracks_to_remove)} track(s) that don't match genre...")
+                log(f"  {name}: Removing {len(tracks_to_remove)} track(s) (unliked or wrong genre)...")
                 # Use safe removal with backup and validation
                 from .data_protection import safe_remove_tracks_from_playlist
                 success, backup_file = safe_remove_tracks_from_playlist(
@@ -698,6 +702,8 @@ def update_master_genre_playlists(sp: spotipy.Spotify) -> None:
                 log(f"  {name}: +{len(to_add)} tracks (manually added tracks preserved)")
                 # Update description with genre tags (use all tracks in playlist)
                 _update_playlist_description_with_genres(sp, user_id, pid, None)
+            else:
+                log(f"  {name}: up to date ({len(uris_should_be_in_playlist)} tracks)")
         else:
             verbose_log(f"Creating new playlist '{name}' for genre '{genre}'...")
             pl = api_call(
@@ -720,6 +726,118 @@ def update_master_genre_playlists(sp: spotipy.Spotify) -> None:
             # Invalidate playlist cache since we created a new playlist
             _invalidate_playlist_cache()
             log(f"  {name}: created with {len(uris_should_be_in_playlist)} tracks")
+    
+    # Create/update "Other" playlist for tracks without genre classification
+    # IMPORTANT: "Other" should ONLY contain tracks that are NOT in any other AJam playlist
+    if tracks_without_genres:
+        other_genre = "Other"
+        name = format_playlist_name(GENRE_NAME_TEMPLATE, genre=other_genre, playlist_type="genre_master")
+        
+        # Build set of all tracks that are assigned to other genre playlists (unique partition)
+        # This ensures "Other" only contains tracks NOT assigned to any genre playlist
+        tracks_in_other_genre_playlists = set(uri_to_single_genre.keys())
+        
+        # Filter "Other" playlist tracks to only include those NOT assigned to any genre playlist
+        # AND not in uri_to_genres (no genre classification)
+        # This ensures "Other" only has tracks that truly don't belong in any genre playlist
+        tracks_for_other = tracks_without_genres - tracks_in_other_genre_playlists
+        tracks_assigned_to_playlists.update(tracks_for_other)
+        
+        if name in existing:
+            pid = existing[name]
+            already_in_playlist = get_playlist_tracks(sp, pid)
+            
+            # Remove tracks that shouldn't be in "Other" (keep partition in sync with liked songs)
+            # 1. Tracks no longer liked -> remove from partition
+            # 2. Liked tracks that now have genre classification (assigned to another playlist)
+            tracks_to_remove = []
+            for track_uri in already_in_playlist:
+                if track_uri not in liked_uris:
+                    tracks_to_remove.append(track_uri)  # No longer liked
+                elif track_uri in uri_to_single_genre:
+                    tracks_to_remove.append(track_uri)  # Now in a genre playlist
+            
+            if tracks_to_remove:
+                log(f"  {name}: Removing {len(tracks_to_remove)} track(s) (unliked or now in genre playlist)...")
+                from .data_protection import safe_remove_tracks_from_playlist
+                success, backup_file = safe_remove_tracks_from_playlist(
+                    sp, pid, name, tracks_to_remove,
+                    create_backup=True,
+                    validate_after=True
+                )
+                if not success:
+                    log(f"  ⚠️  Warning: Track removal validation failed for {name}")
+                    if backup_file:
+                        log(f"  💾 Backup available: {backup_file.name}")
+                else:
+                    if pid in _playlist_tracks_cache:
+                        del _playlist_tracks_cache[pid]
+                    already_in_playlist = get_playlist_tracks(sp, pid, force_refresh=True)
+            
+            # Add tracks that should be in "Other" playlist (not in other playlists, no genre classification)
+            to_add = [u for u in tracks_for_other if u not in already_in_playlist]
+            
+            if to_add:
+                for chunk in _chunked(to_add, 50):
+                    api_call(sp.playlist_add_items, pid, chunk)
+                if pid in _playlist_tracks_cache:
+                    del _playlist_tracks_cache[pid]
+                log(f"  {name}: +{len(to_add)} tracks (only tracks not in other genre playlists)")
+                _update_playlist_description_with_genres(sp, user_id, pid, None)
+            else:
+                log(f"  {name}: up to date ({len(tracks_for_other)} tracks, excluding {len(tracks_without_genres) - len(tracks_for_other)} in other playlists)")
+        else:
+            verbose_log(f"Creating new playlist '{name}' for unclassified tracks (not in other genre playlists)...")
+            pl = api_call(
+                sp.user_playlist_create,
+                user_id,
+                name,
+                public=False,
+                description=format_playlist_description("All liked songs", genre=other_genre, playlist_type="genre_master"),
+            )
+            pid = pl["id"]
+            verbose_log(f"  Created playlist '{name}' with id {pid}, adding {len(tracks_for_other)} tracks (excluding {len(tracks_without_genres) - len(tracks_for_other)} in other playlists)...")
+
+            chunk_count = 0
+            for chunk in _chunked(list(tracks_for_other), 50):
+                chunk_count += 1
+                verbose_log(f"  Adding chunk {chunk_count} ({len(chunk)} tracks) to new playlist...")
+                api_call(sp.playlist_add_items, pid, chunk)
+            _update_playlist_description_with_genres(sp, user_id, pid, list(tracks_for_other))
+            _invalidate_playlist_cache()
+            log(f"  {name}: created with {len(tracks_for_other)} tracks (excluding {len(tracks_without_genres) - len(tracks_for_other)} already in other genre playlists)")
+    
+    # Validate unique partition coverage
+    all_assigned_tracks = tracks_assigned_to_playlists
+    missing_tracks = liked_uris - all_assigned_tracks
+    
+    if missing_tracks:
+        log(f"  ⚠️  WARNING: {len(missing_tracks)} track(s) not assigned to any playlist!")
+        if verbose_log:
+            verbose_log(f"  Missing tracks (first 10): {list(missing_tracks)[:10]}")
+    else:
+        log(f"  ✅ Unique partition verified: All {len(liked_uris)} liked tracks are in exactly one playlist")
+        
+        # Verify no duplicates across playlists
+        all_playlist_tracks = set()
+        duplicate_tracks = set()
+        for genre in all_genres_with_tracks + (["Other"] if tracks_without_genres else []):
+            name = format_playlist_name(GENRE_NAME_TEMPLATE, genre=genre, playlist_type="genre_master")
+            if name in existing:
+                pid = existing[name]
+                playlist_tracks = get_playlist_tracks(sp, pid)
+                for track_uri in playlist_tracks:
+                    if track_uri in liked_uris:  # Only check liked songs
+                        if track_uri in all_playlist_tracks:
+                            duplicate_tracks.add(track_uri)
+                        all_playlist_tracks.add(track_uri)
+        
+        if duplicate_tracks:
+            log(f"  ⚠️  WARNING: {len(duplicate_tracks)} track(s) appear in multiple playlists!")
+            if verbose_log:
+                verbose_log(f"  Duplicate tracks (first 10): {list(duplicate_tracks)[:10]}")
+        else:
+            log(f"  ✅ No duplicates: Each track appears in exactly one playlist")
     
     # Save tracks_df if it was modified
     if tracks_modified:

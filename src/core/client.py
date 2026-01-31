@@ -5,6 +5,7 @@ Spotim8 client - pandas-first interface to Spotify Web API.
 from __future__ import annotations
 
 import os
+import sys
 import warnings
 from typing import Optional, Callable
 
@@ -92,6 +93,13 @@ class Spotim8:
         """Wrapper for rate-limited API calls."""
         return rate_limited_call(func, *args, delay=self._request_delay, **kwargs)
 
+    def _progress_print(self, msg: str) -> None:
+        """Print message in a way that doesn't break tqdm progress bars."""
+        if self.progress:
+            tqdm.write(msg)
+        else:
+            print(msg)
+
     def _me_id(self) -> str:
         meta = self.catalog.load_meta()
         if "me_id" in meta:
@@ -156,7 +164,7 @@ class Spotim8:
         Returns:
             dict with sync statistics
         """
-        print("🔄 Starting library sync...")
+        self._progress_print("🔄 Starting library sync...")
         stats = {"playlists_checked": 0, "playlists_updated": 0, "tracks_added": 0, "liked_songs": 0}
         
         # Always refresh playlist list (includes Liked Songs)
@@ -185,7 +193,7 @@ class Spotim8:
         
         if changed:
             changed_names = pls[pls["playlist_id"].isin(changed)]["name"].tolist()
-            print(f"📝 {len(changed)} playlist(s) changed: {', '.join(changed_names[:5])}{'...' if len(changed_names) > 5 else ''}")
+            self._progress_print(f"📝 {len(changed)} playlist(s) changed: {', '.join(changed_names[:5])}{'...' if len(changed_names) > 5 else ''}")
             
             # Load existing or create new
             pt = self.catalog.load("playlist_tracks")
@@ -203,13 +211,32 @@ class Spotim8:
                 stats["liked_songs"] = len(liked_rows)
                 changed = [pid for pid in changed if pid != LIKED_SONGS_PLAYLIST_ID]
             
-            # Fetch regular playlists
-            iterator = changed
+            # Build pid -> name for progress display
+            pid_to_name = pls.set_index("playlist_id")["name"].to_dict()
+            
+            # Fetch regular playlists with visible progress (file=stderr, mininterval so bar updates).
+            # Use position=0 and fixed ncols when stderr isn't a TTY so updates don't concatenate on one line.
             if self.progress and changed:
-                iterator = tqdm(iterator, desc="Syncing playlists", unit="pl")
-
-            for pid in iterator:
-                rows.extend(self._fetch_playlist_tracks_rows(pid))
+                _file = sys.stderr
+                _ncols = None if _file.isatty() else 80
+                pbar = tqdm(
+                    changed,
+                    desc="Syncing playlists",
+                    unit="pl",
+                    file=_file,
+                    dynamic_ncols=(_ncols is None),
+                    ncols=_ncols,
+                    mininterval=0.5,
+                    leave=True,
+                    position=0,
+                )
+                for pid in pbar:
+                    name = (pid_to_name.get(pid) or pid)[:30]
+                    pbar.set_postfix_str(name, refresh=True)
+                    rows.extend(self._fetch_playlist_tracks_rows(pid))
+            else:
+                for pid in changed:
+                    rows.extend(self._fetch_playlist_tracks_rows(pid))
 
             stats["tracks_added"] = len(rows)
             
@@ -227,7 +254,7 @@ class Spotim8:
                     p.unlink(missing_ok=True)
                 self.catalog._memo.pop(key, None)
         else:
-            print("✅ All playlists up to date!")
+            self._progress_print("✅ All playlists up to date!")
 
         # Update metadata
         meta["playlist_snapshots"] = new_snapshots
@@ -236,9 +263,9 @@ class Spotim8:
         meta["include_liked_songs"] = include_liked_songs
         self.catalog.save_meta(meta)
         
-        print(f"✅ Sync complete! Checked {stats['playlists_checked']} playlists, updated {stats['playlists_updated']}, added {stats['tracks_added']} track entries")
+        self._progress_print(f"✅ Sync complete! Checked {stats['playlists_checked']} playlists, updated {stats['playlists_updated']}, added {stats['tracks_added']} track entries")
         if stats["liked_songs"] > 0:
-            print(f"❤️  Including {stats['liked_songs']:,} liked songs (master playlist)")
+            self._progress_print(f"❤️  Including {stats['liked_songs']:,} liked songs (master playlist)")
         return stats
     
     def refresh(self, force: bool = False, owned_only: bool = True) -> None:
@@ -273,7 +300,7 @@ class Spotim8:
     
     def _fetch_liked_songs_rows(self) -> list[dict]:
         """Fetch all liked/saved tracks from user's library."""
-        print("❤️  Fetching Liked Songs (your master playlist)...")
+        self._progress_print("❤️  Fetching Liked Songs (your master playlist)...")
         
         all_items = []
         offset = 0
@@ -287,7 +314,16 @@ class Spotim8:
         
         # Paginate through all liked songs
         if self.progress and total > limit:
-            pbar = tqdm(total=total, initial=len(all_items), desc="Fetching Liked Songs", unit="track")
+            pbar = tqdm(
+                total=total,
+                initial=len(all_items),
+                desc="Fetching Liked Songs",
+                unit="track",
+                file=sys.stderr,
+                dynamic_ncols=True,
+                mininterval=0.5,
+                leave=True,
+            )
         else:
             pbar = None
             
@@ -322,7 +358,7 @@ class Spotim8:
                 "position": pos,
             })
         
-        print(f"❤️  Found {len(rows):,} liked songs")
+        self._progress_print(f"❤️  Found {len(rows):,} liked songs")
         return rows
     
     def liked_songs(self, force: bool = False) -> pd.DataFrame:
@@ -407,14 +443,14 @@ class Spotim8:
         
         if owned_only:
             pls_to_fetch = pls[pls["is_owned"].eq(True)].copy()
-            print(f"📂 Fetching tracks from {len(pls_to_fetch)} owned playlists (skipping {len(pls) - len(pls_to_fetch)} followed playlists)")
+            self._progress_print(f"📂 Fetching tracks from {len(pls_to_fetch)} owned playlists (skipping {len(pls) - len(pls_to_fetch)} followed playlists)")
         else:
             pls_to_fetch = pls.copy()
-            print(f"📂 Fetching tracks from all {len(pls_to_fetch)} playlists")
+            self._progress_print(f"📂 Fetching tracks from all {len(pls_to_fetch)} playlists")
         
         # Show expected track count
         expected_tracks = pls_to_fetch["track_count"].sum()
-        print(f"📊 Expected total track entries: {expected_tracks:,}")
+        self._progress_print(f"📊 Expected total track entries: {expected_tracks:,}")
         
         rows = []
         
@@ -427,15 +463,27 @@ class Spotim8:
         
         # Fetch regular playlists
         iterator = list(pls_to_fetch["playlist_id"].tolist())
+        pl_names = pls_to_fetch.set_index("playlist_id")["name"].to_dict()
         
         if self.progress:
-            iterator = tqdm(iterator, desc="Fetching playlist tracks", unit="pl")
-
-        for pid in iterator:
-            playlist_rows = self._fetch_playlist_tracks_rows(pid)
-            rows.extend(playlist_rows)
-            if self.progress and hasattr(iterator, 'set_postfix'):
-                iterator.set_postfix(tracks=len(rows))
+            pbar = tqdm(
+                iterator,
+                desc="Fetching playlist tracks",
+                unit="pl",
+                file=sys.stderr,
+                dynamic_ncols=True,
+                mininterval=0.5,
+                leave=True,
+            )
+            for pid in pbar:
+                name = (pl_names.get(pid) or pid)[:30]
+                pbar.set_postfix_str(name, refresh=True)
+                playlist_rows = self._fetch_playlist_tracks_rows(pid)
+                rows.extend(playlist_rows)
+        else:
+            for pid in iterator:
+                playlist_rows = self._fetch_playlist_tracks_rows(pid)
+                rows.extend(playlist_rows)
 
         df = pd.DataFrame(rows)
         
@@ -444,11 +492,11 @@ class Spotim8:
         unique_tracks = df["track_id"].nunique() if len(df) > 0 else 0
         liked_count = len(df[df["playlist_id"] == LIKED_SONGS_PLAYLIST_ID]) if len(df) > 0 else 0
         
-        print(f"✅ Pulled {actual_tracks:,} track entries ({unique_tracks:,} unique tracks)")
-        print(f"❤️  Including {liked_count:,} liked songs (master playlist)")
+        self._progress_print(f"✅ Pulled {actual_tracks:,} track entries ({unique_tracks:,} unique tracks)")
+        self._progress_print(f"❤️  Including {liked_count:,} liked songs (master playlist)")
         
         if actual_tracks < expected_tracks * 0.9:  # Allow 10% tolerance for local/unavailable tracks
-            print("⚠️  Warning: Got fewer tracks than expected. Some may be local files or unavailable.")
+            self._progress_print("⚠️  Warning: Got fewer tracks than expected. Some may be local files or unavailable.")
         
         return self.catalog.save(key, df)
 
@@ -471,7 +519,15 @@ class Spotim8:
         rows = []
         iterator = list(chunks(ids, 50))
         if self.progress:
-            iterator = tqdm(iterator, desc="Fetching tracks", unit="chunk")
+            iterator = tqdm(
+                iterator,
+                desc="Fetching tracks",
+                unit="chunk",
+                file=sys.stderr,
+                dynamic_ncols=True,
+                mininterval=0.5,
+                leave=True,
+            )
 
         for chunk in iterator:
             resp = self._rate_limited(self.sp.tracks, chunk)
@@ -517,7 +573,15 @@ class Spotim8:
         rows = []
         iterator = list(chunks(ids, 50))
         if self.progress:
-            iterator = tqdm(iterator, desc="Fetching track artists", unit="chunk")
+            iterator = tqdm(
+                iterator,
+                desc="Fetching track artists",
+                unit="chunk",
+                file=sys.stderr,
+                dynamic_ncols=True,
+                mininterval=0.5,
+                leave=True,
+            )
 
         for chunk in iterator:
             resp = self._rate_limited(self.sp.tracks, chunk)
@@ -549,7 +613,15 @@ class Spotim8:
         rows = []
         iterator = list(chunks(ids, 50))
         if self.progress:
-            iterator = tqdm(iterator, desc="Fetching artists", unit="chunk")
+            iterator = tqdm(
+                iterator,
+                desc="Fetching artists",
+                unit="chunk",
+                file=sys.stderr,
+                dynamic_ncols=True,
+                mininterval=0.5,
+                leave=True,
+            )
 
         for chunk in iterator:
             resp = self._rate_limited(self.sp.artists, chunk)

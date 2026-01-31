@@ -25,6 +25,7 @@ import spotipy
 from src.scripts.common import (
     setup_script_environment,
     get_project_root,
+    get_data_dir,
     get_spotify_client,
     get_user_info,
     api_call,
@@ -44,8 +45,7 @@ def merge_playlists(sp: spotipy.Spotify, playlist1_name: str, playlist2_name: st
     user_id = user["id"]
     
     # Load playlist data
-    data_dir = PROJECT_ROOT / "data"
-    playlists_df = pd.read_parquet(data_dir / "playlists.parquet")
+    playlists_df = pd.read_parquet(DATA_DIR / "playlists.parquet")
     
     # Find playlists
     try:
@@ -61,7 +61,7 @@ def merge_playlists(sp: spotipy.Spotify, playlist1_name: str, playlist2_name: st
     pl2_track_count = pl2['track_count']
     
     # Determine which playlist is older by checking earliest added_at timestamp
-    playlist_tracks_path = data_dir / "playlist_tracks.parquet"
+    playlist_tracks_path = DATA_DIR / "playlist_tracks.parquet"
     if playlist_tracks_path.exists():
         try:
             playlist_tracks_df = pd.read_parquet(playlist_tracks_path)

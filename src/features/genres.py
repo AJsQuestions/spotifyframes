@@ -347,6 +347,11 @@ def get_all_broad_genres(genre_list: list) -> List[str]:
     matched = []
     seen = set()
     
+    # Phrases where "blues" appears but belongs to another category (don't match Blues for these)
+    BLUES_AMBIGUOUS_PHRASES = (
+        "rhythm and blues", "rnb", "soul blues", "jazz blues", "blues rock",
+    )
+
     for keywords, category in GENRE_RULES:
         if category in seen:
             continue
@@ -366,7 +371,18 @@ def get_all_broad_genres(genre_list: list) -> List[str]:
                     break
             else:
                 # Single word - must be exact word match (word boundaries)
-                # Check if it's in the word set (exact match)
+                # Special case: "blues" alone matches "rhythm and blues", "soul blues", "jazz blues", "blues rock"
+                # Only assign Blues when "blues" is clearly the genre, not part of R&B/Jazz/Rock
+                if kw_lower == "blues" and category == "Blues":
+                    if kw_lower not in combined_words:
+                        continue
+                    # Don't match Blues if combined contains phrases where blues is part of another genre
+                    combined_lower = combined.lower().replace("r&b", "rnb").replace("r and b", "rnb")
+                    if any(phrase in combined_lower for phrase in BLUES_AMBIGUOUS_PHRASES):
+                        continue
+                    matched.append(category)
+                    seen.add(category)
+                    break
                 if kw_lower in combined_words:
                     matched.append(category)
                     seen.add(category)

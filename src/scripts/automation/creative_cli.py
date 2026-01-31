@@ -9,9 +9,9 @@ import argparse
 import sys
 from pathlib import Path
 
-# Add project root to path
+# Add project root to path (SPOTIM8 directory: automation -> scripts -> src -> project root)
 SCRIPT_DIR = Path(__file__).resolve().parent
-PROJECT_ROOT = SCRIPT_DIR.parent.parent.parent.parent
+PROJECT_ROOT = SCRIPT_DIR.parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from dotenv import load_dotenv

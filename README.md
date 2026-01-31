@@ -1,6 +1,6 @@
-# 🎵 Spotim8 v4.0.0
+# 🎵 SpotiM8 v5.0.0
 
-**Personal Spotify analytics platform** with **automated playlist management** and **streaming history integration**.
+**Professional Spotify analytics platform** with **automated playlist management**, **CLI**, **dashboard**, and **streaming history integration**.
 
 Turn your Spotify library into tidy DataFrames, analyze your listening habits, and automatically organize your music into smart playlists based on both your library and actual listening patterns.
 
@@ -9,15 +9,15 @@ Turn your Spotify library into tidy DataFrames, analyze your listening habits, a
 - 📊 **Pandas DataFrames** - Your library as tidy, mergeable tables
 - 📅 **3 Core Playlist Types** - Finds (liked songs), Top (most played), and Discovery (new tracks)
 - 🎸 **Genre-Split Playlists** - Separate by HipHop, Dance, Other
-- 🎵 **Master Genre Playlists** - All-time playlists by genre
+- 🎵 **Master Genre Playlists** - Exhaustive all-time playlists that partition your entire library by genre
 - 📈 **Streaming History Integration** - Analyze actual listening patterns from Spotify exports
 - 🎯 **Most Played Playlists** - Monthly playlists based on actual listening data
 - 🔍 **Discovery Playlists** - Track newly discovered music
 - 🤖 **Daily Automation** - Local cron job updates playlists automatically
 - 💾 **Local Cache** - Parquet files for fast offline access
 - 🔄 **No Duplicates** - Smart deduplication on every run
-- 📊 **Enhanced Analysis** - 7 comprehensive Jupyter notebooks for deep insights
-- ✨ **Rich Playlist Descriptions** - Auto-generated descriptions with statistics, genres, and metadata
+- 📊 **Analysis Notebooks** - 5 demonstrative Jupyter notebooks for views and visualization
+- ✨ **Rich Playlist Descriptions** - Auto-generated descriptions with statistics, genres, and Daylist-style mood tags (Chill, Energetic, Focus, etc.)
 - 🏥 **Health Checks** - Identify empty playlists, duplicates, and organizational issues
 - 🎨 **Playlist Organization** - Smart categorization and organization tools
 - 🛡️ **Production-Grade** - Robust error handling, logging, and monitoring
@@ -27,9 +27,11 @@ Turn your Spotify library into tidy DataFrames, analyze your listening habits, a
 
 ## 📋 Requirements
 
-- Python 3.10+
+- **Python 3.10+** (required - Python 3.9 and below are not supported)
 - Spotify Developer Account (free)
 - Spotify Premium (for some features)
+
+**Note:** If you see an error like `Package 'spotim8' requires a different Python: 3.9.6 not in '>=3.10'`, you need to upgrade Python. Use `python3 --version` to check your version.
 
 ---
 
@@ -42,7 +44,8 @@ Turn your Spotify library into tidy DataFrames, analyze your listening habits, a
 git clone https://github.com/AJsQuestions/spotim8.git
 cd spotim8
 
-# Create virtual environment
+# Create virtual environment (requires Python 3.10+)
+python3 --version  # Verify you have Python 3.10 or higher
 python3 -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 
@@ -144,17 +147,17 @@ See [examples/01_quickstart.py](examples/01_quickstart.py) for a complete exampl
 
 | Notebook | Description |
 |----------|-------------|
-| `01_sync_data.ipynb` | Download and cache your Spotify library + streaming history |
 | `02_analyze_library.ipynb` | Visualize your listening habits and library statistics |
 | `03_playlist_analysis.ipynb` | Genre analysis and playlist clustering |
 | `04_analyze_listening_history.ipynb` | Analyze actual listening patterns from Spotify exports |
-| `05_liked_songs_monthly_playlists.ipynb` | **Create all automated playlists** |
 | `06_identify_redundant_playlists.ipynb` | Find and consolidate similar playlists |
 | `07_analyze_crashes.ipynb` | Technical log analysis and crash detection |
 
+Prerequisites: sync your library and (optional) streaming history via CLI or dashboard first. See `src/notebooks/README.md`.
+
 ### Playlist Generation
 
-The sync script and notebook `05_liked_songs_monthly_playlists.ipynb` create automated playlists:
+The sync script (CLI or dashboard) creates automated playlists:
 
 **Playlist Types:**
 - 📅 **Finds** - Liked songs: `{Owner}{Prefix}{Mon}{Year}` → e.g., `AJFndsDec25`
@@ -166,8 +169,11 @@ The sync script and notebook `05_liked_songs_monthly_playlists.ipynb` create aut
   - Requires streaming history data
 - 🎸 **Genre-Split Monthly** - `{Genre}{Prefix}{Mon}{Year}` → e.g., `HipHopFindsDec25`, `DanceFindsDec25`
   - Automatically created for Finds playlists
-- 🎵 **Master Genre Playlists** - `{Owner}am{Genre}` → e.g., `AJamHip-Hop`, `AJamElectronic`
-  - All-time playlists by genre
+- 🎵 **Master Genre Playlists** - `{Owner}am{Genre}` → e.g., `AJamHip-Hop`, `AJamElectronic`, `AJamOther`
+  - **Exhaustive partitioning**: Every liked song is guaranteed to be in at least one playlist
+  - All-time playlists by genre (no threshold filtering - all genres with tracks get playlists)
+  - Tracks without genre classification go into "Other" playlist
+  - Tracks can appear in multiple playlists if they match multiple genres
 
 **Automatic Consolidation:**
 - Last 3 months kept as monthly playlists
@@ -346,11 +352,9 @@ SPOTIM8/
 │   │   ├── ratelimit.py          # Rate limiting utilities
 │   │   └── utils.py              # Helper functions
 │   ├── notebooks/                # Jupyter notebooks for analysis
-│   │   ├── 01_sync_data.ipynb        # Sync library data & streaming history
 │   │   ├── 02_analyze_library.ipynb  # Visualize listening habits
 │   │   ├── 03_playlist_analysis.ipynb # Genre analysis & clustering
 │   │   ├── 04_analyze_listening_history.ipynb # Analyze listening patterns
-│   │   ├── 05_liked_songs_monthly_playlists.ipynb # Create automated playlists
 │   │   ├── 06_identify_redundant_playlists.ipynb # Find similar playlists
 │   │   ├── 07_analyze_crashes.ipynb  # Technical log analysis
 │   │   └── notebook_helpers.py       # Shared notebook utilities
@@ -377,6 +381,10 @@ SPOTIM8/
 │       └── utils/                # Utility scripts
 │           ├── get_token.py      # Get refresh token for automation
 │           └── setup.py          # Initial setup helper
+│
+├── dashboard/                    # Streamlit dashboard (optional)
+│   ├── app.py                    # Run: streamlit run dashboard/app.py
+│   └── README.md                 # Dashboard setup
 │
 ├── examples/                     # Example code
 │   └── 01_quickstart.py          # Quick start example
@@ -487,14 +495,14 @@ We welcome contributions! Please see [docs/development/contributing.md](docs/dev
 # Install with dev dependencies
 pip install -e ".[dev]"
 
-# Run tests
+# Run tests (install dev deps first: pip install -e ".[dev]")
 pytest tests/
 
 # Format code
-black spotim8/
+black src/
 
 # Lint code
-ruff check spotim8/
+ruff check src/
 ```
 
 ---

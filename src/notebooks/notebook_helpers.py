@@ -1,8 +1,8 @@
 """
-Notebook helper functions for src analysis notebooks.
+Notebook helpers for analysis notebooks.
 
-This module contains all the analysis logic extracted from the notebooks,
-allowing notebooks to be simple demonstration scripts that call these functions.
+Analysis logic lives here; notebooks are demonstrative and call these functions
+for views, analysis, and visualization. Sync/automation is handled by CLI/dashboard.
 """
 
 import os
@@ -22,11 +22,8 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from src import Spotim8, set_response_cache
-from src.core.catalog import CacheConfig
 from src.analysis.analysis import LibraryAnalyzer, PlaylistSimilarityEngine
 from src.analysis.streaming_history import (
-    sync_all_export_data,
     load_streaming_history,
     load_search_queries_cached,
     load_wrapped_data_cached,
@@ -41,88 +38,28 @@ warnings.filterwarnings('ignore')
 
 
 # ============================================================================
-# Setup & Configuration Functions
+# Setup & Data Path
 # ============================================================================
 
 def setup_project(project_root: Optional[Path] = None) -> Path:
     """Setup project root and return the path."""
     if project_root is None:
-        project_root = Path("..").resolve()
+        project_root = Path(__file__).resolve().parent.parent.parent
     if str(project_root) not in sys.path:
         sys.path.insert(0, str(project_root))
     print(f"✅ Project root: {project_root}")
     return project_root
 
 
-def setup_credentials(project_root: Path) -> bool:
-    """Load and verify Spotify credentials from .env file."""
-    from dotenv import load_dotenv
-    
-    env_path = project_root / ".env"
-    if env_path.exists():
-        load_dotenv(env_path)
-        print(f"✅ Loaded credentials from {env_path}")
-    else:
-        print(f"⚠️  No .env file found at {env_path}")
-        print("   Create one with SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, SPOTIPY_REDIRECT_URI")
-        return False
-    
-    client_id = os.environ.get("SPOTIPY_CLIENT_ID", "")
-    if client_id and client_id != "YOUR_CLIENT_ID":
-        print(f"   Client ID: {client_id[:8]}...")
-        return True
-    else:
-        print("   ❌ SPOTIPY_CLIENT_ID not set!")
-        return False
-
-
-def setup_spotify_client(project_root: Path, progress: bool = True, cache_ttl: int = 3600) -> Spotim8:
-    """Initialize and return a Spotim8 client with caching enabled."""
-    data_dir = project_root / "data"
-    data_dir.mkdir(exist_ok=True)
-    
-    api_cache_dir = data_dir / ".api_cache"
-    set_response_cache(api_cache_dir, ttl=cache_ttl)
-    
-    sf = Spotim8.from_env(
-        progress=progress,
-        cache=CacheConfig(dir=data_dir)
-    )
-    
-    print(f"✅ Connected to Spotify!")
-    print(f"📁 Data will be saved to: {data_dir}")
-    return sf
-
-
-# ============================================================================
-# Notebook 01: Sync Data
-# ============================================================================
-
-def sync_spotify_library(sf: Spotim8, sync_export_data: bool = True) -> Dict[str, Any]:
-    """Sync Spotify library and optionally export data."""
-    print("🔄 Starting library sync...")
-    
-    # Sync main library
-    sf.sync()
-    
-    results = {
-        'library_synced': True,
-        'export_data_synced': False
-    }
-    
-    # Optionally sync export data
-    if sync_export_data:
-        data_dir = sf.data_dir
-        print("\n📦 Syncing export data...")
-        try:
-            sync_all_export_data(data_dir, project_root=PROJECT_ROOT)
-            results['export_data_synced'] = True
-            print("✅ Export data sync complete!")
-        except Exception as e:
-            print(f"⚠️  Export data sync failed: {e}")
-            print("   (This is optional - you can continue without export data)")
-    
-    return results
+def get_data_dir(project_root: Optional[Path] = None) -> Path:
+    """Return canonical data directory (under SPOTIM8). Use for loading parquet files."""
+    if project_root is None:
+        project_root = PROJECT_ROOT
+    try:
+        from src.scripts.common.project_path import get_data_dir as _get_data_dir
+        return _get_data_dir(__file__)
+    except Exception:
+        return (project_root / "data").resolve()
 
 
 # ============================================================================
@@ -160,14 +97,14 @@ def generate_library_statistics(analyzer: LibraryAnalyzer) -> Dict[str, Any]:
     playlists = analyzer.playlists
     tracks = analyzer.tracks
     artists = analyzer.artists
-    
+
     stats = {
         'total_playlists': len(playlists),
         'total_tracks': len(tracks),
         'total_artists': len(artists),
         'total_unique_tracks': len(tracks['track_id'].unique()) if len(tracks) > 0 else 0,
     }
-    
+
     if len(playlists) > 0:
         stats['playlist_size_stats'] = {
             'mean': playlists['track_count'].mean(),
@@ -175,36 +112,82 @@ def generate_library_statistics(analyzer: LibraryAnalyzer) -> Dict[str, Any]:
             'min': playlists['track_count'].min(),
             'max': playlists['track_count'].max(),
         }
-    
+
     return stats
+
+
+def view_library_overview(analyzer: LibraryAnalyzer) -> None:
+    """Display library overview: playlists, tracks, artists."""
+    stats = generate_library_statistics(analyzer)
+    print(f"Playlists: {stats['total_playlists']:,}  |  Tracks: {stats['total_tracks']:,}  |  Artists: {stats['total_artists']:,}")
+    if 'playlist_size_stats' in stats:
+        s = stats['playlist_size_stats']
+        print(f"Playlist size: min={s['min']:.0f}, max={s['max']:.0f}, median={s['median']:.0f}")
+
+
+def view_top_artists(analyzer: LibraryAnalyzer, top_n: int = 15) -> pd.DataFrame:
+    """Return top artists by track count for display/plotting."""
+    track_artists = analyzer.track_artists
+    artists = analyzer.artists
+    if track_artists is None or artists is None or len(track_artists) == 0:
+        return pd.DataFrame()
+    primary = track_artists[track_artists.get('position', 0) == 0]
+    counts = primary.groupby('artist_id').size().sort_values(ascending=False).head(top_n)
+    return artists.set_index('artist_id').loc[counts.index].assign(track_count=counts.values).reset_index()
+
+
+def view_popularity_distribution(analyzer: LibraryAnalyzer):
+    """Plot popularity distribution of tracks. Returns (fig, ax)."""
+    import matplotlib.pyplot as plt
+    tracks = analyzer.tracks
+    if tracks is None or 'popularity' not in tracks.columns or len(tracks) == 0:
+        return None
+    fig, ax = plt.subplots(figsize=(8, 4))
+    tracks['popularity'].hist(bins=20, ax=ax, edgecolor='white', alpha=0.8)
+    ax.set_xlabel('Popularity')
+    ax.set_ylabel('Tracks')
+    ax.set_title('Track popularity distribution')
+    plt.tight_layout()
+    return fig
+
+
+def view_release_years(analyzer: LibraryAnalyzer):
+    """Plot release year distribution. Returns (fig, ax)."""
+    import matplotlib.pyplot as plt
+    tracks = analyzer.tracks
+    if tracks is None or 'release_year' not in tracks.columns or len(tracks) == 0:
+        return None
+    fig, ax = plt.subplots(figsize=(8, 4))
+    tracks['release_year'].dropna().astype(int).hist(bins=range(1960, 2030), ax=ax, edgecolor='white', alpha=0.8)
+    ax.set_xlabel('Release year')
+    ax.set_ylabel('Tracks')
+    ax.set_title('Release year distribution')
+    plt.tight_layout()
+    return fig
 
 
 # ============================================================================
 # Notebook 03: Playlist Analysis
 # ============================================================================
 
-def build_playlist_genre_profiles(analyzer: LibraryAnalyzer) -> pd.DataFrame:
-    """Build genre profiles for all playlists."""
-    from src.analysis import build_playlist_genre_profiles as _build
-    return _build(analyzer)
+def build_playlist_genre_profiles(analyzer: LibraryAnalyzer):
+    """Build genre profiles for all playlists. Returns dict playlist_id -> Counter of genres."""
+    from src.analysis.analysis import build_playlist_genre_profiles as _build
+    return _build(
+        analyzer.playlists_all,
+        analyzer.playlist_tracks_all,
+        analyzer.track_artists_all,
+        analyzer.artists_all,
+    )
 
 
 def analyze_playlist_similarity(
     analyzer: LibraryAnalyzer,
-    search_mode: str = "followed_only"
+    search_mode: str = "followed_only",
 ) -> PlaylistSimilarityEngine:
-    """Analyze playlist similarity and return similarity engine."""
-    from src.analysis import PlaylistSimilarityEngine
-    
+    """Build and return playlist similarity engine (call .build() then .find_similar())."""
     similarity_engine = PlaylistSimilarityEngine(analyzer)
-    
-    if search_mode == "followed_only":
-        search_playlists = analyzer.playlists_all[analyzer.playlists_all['is_owned'] == False]
-    elif search_mode == "owned_only":
-        search_playlists = analyzer.playlists_all[analyzer.playlists_all['is_owned'] == True]
-    else:  # "all"
-        search_playlists = analyzer.playlists_all
-    
+    similarity_engine.build(include_followed=(search_mode != "owned_only"))
     return similarity_engine
 
 
@@ -248,53 +231,34 @@ def analyze_listening_patterns(
     """Analyze listening patterns from streaming history."""
     if streaming_history is None or len(streaming_history) == 0:
         return {'error': 'No streaming history data available'}
-    
+
+    time_col = 'played_at' if 'played_at' in streaming_history.columns else 'timestamp'
+    if time_col not in streaming_history.columns:
+        return {
+            'total_plays': len(streaming_history),
+            'unique_tracks': streaming_history['track_id'].nunique() if 'track_id' in streaming_history.columns else 0,
+            'unique_artists': streaming_history['artist_id'].nunique() if 'artist_id' in streaming_history.columns else 0,
+        }
+
     patterns = {
         'total_plays': len(streaming_history),
         'unique_tracks': streaming_history['track_id'].nunique() if 'track_id' in streaming_history.columns else 0,
         'unique_artists': streaming_history['artist_id'].nunique() if 'artist_id' in streaming_history.columns else 0,
     }
-    
-    if 'played_at' in streaming_history.columns:
-        streaming_history['played_at'] = pd.to_datetime(streaming_history['played_at'])
-        patterns['date_range'] = {
-            'start': streaming_history['played_at'].min(),
-            'end': streaming_history['played_at'].max(),
-        }
-        
-        # Time of day patterns
-        streaming_history['hour'] = streaming_history['played_at'].dt.hour
-        patterns['hourly_distribution'] = streaming_history['hour'].value_counts().sort_index().to_dict()
-        
-        # Day of week patterns
-        streaming_history['day_of_week'] = streaming_history['played_at'].dt.day_name()
-        patterns['daily_distribution'] = streaming_history['day_of_week'].value_counts().to_dict()
-    
+
+    df = streaming_history.copy()
+    df[time_col] = pd.to_datetime(df[time_col])
+    patterns['date_range'] = {'start': df[time_col].min(), 'end': df[time_col].max()}
+    df['hour'] = df[time_col].dt.hour
+    patterns['hourly_distribution'] = df['hour'].value_counts().sort_index().to_dict()
+    df['day_of_week'] = df[time_col].dt.day_name()
+    patterns['daily_distribution'] = df['day_of_week'].value_counts().to_dict()
+
     return patterns
 
 
 # ============================================================================
-# Notebook 05: Liked Songs Monthly Playlists
-# ============================================================================
-
-def preview_monthly_playlists(
-    analyzer: LibraryAnalyzer,
-    owner_name: str,
-    prefix: str,
-    monthly_template: str,
-    genre_split: bool = True,
-    genre_template: Optional[str] = None
-) -> Dict[str, Any]:
-    """Preview what monthly playlists would be created."""
-    # This is a simplified preview - actual implementation would use sync.py logic
-    return {
-        'preview': 'Monthly playlist preview not yet implemented in helper module',
-        'note': 'Use scripts/sync.py for actual playlist creation'
-    }
-
-
-# ============================================================================
-# Notebook 06: Identify Redundant Playlists
+# Identify Redundant Playlists
 # ============================================================================
 
 def jaccard_similarity(set1: Set, set2: Set) -> float:

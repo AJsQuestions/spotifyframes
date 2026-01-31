@@ -14,7 +14,7 @@ Welcome to the SpotiM8 documentation! This directory contains comprehensive docu
 - **[Automation](features/automation.md)** - Scheduled syncs and cron jobs
 
 ### 🛠️ Development
-- **[Contributing Guide](../CONTRIBUTING.md)** - How to contribute to the project
+- **[Contributing Guide](development/contributing.md)** - How to contribute to the project
 - **[Refactoring Plan](development/refactoring-plan.md)** - Code quality improvements and refactoring status
 
 ### 📋 Reference

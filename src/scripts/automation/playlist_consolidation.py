@@ -15,7 +15,9 @@ from dateutil.relativedelta import relativedelta
 
 from .formatting import format_playlist_name, format_yearly_playlist_name, format_playlist_description
 from src.features.genres import get_all_split_genres, SPLIT_GENRES
+from .error_handling import handle_errors
 
+@handle_errors(reraise=False, default_return=None, log_error=True)
 def consolidate_old_monthly_playlists(sp: spotipy.Spotify, keep_last_n_months: int = 3) -> None:
     """Consolidate monthly playlists older than the last N months into yearly playlists.
     

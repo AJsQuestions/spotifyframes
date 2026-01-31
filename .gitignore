@@ -67,6 +67,9 @@ spotim8/notebooks/.cache
 data/
 # But allow a README if needed for documentation
 !data/README.md
+# Allow src/data Python package (export + market) - track .py only
+!src/data/
+!src/data/*.py
 # Explicitly ignore all parquet files (user data)
 *.parquet
 # Explicitly ignore all JSON files in data/ (personal Spotify exports)

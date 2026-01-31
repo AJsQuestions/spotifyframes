@@ -22,6 +22,7 @@ import spotipy
 from src.scripts.common import (
     setup_script_environment,
     get_project_root,
+    get_data_dir,
     get_spotify_client,
     get_user_info,
     api_call,
@@ -29,6 +30,7 @@ from src.scripts.common import (
 
 # Setup environment
 PROJECT_ROOT = setup_script_environment(__file__)
+DATA_DIR = get_data_dir(__file__)
 
 def get_playlist_genres(playlist_id: str, playlist_tracks: pd.DataFrame, 
                         track_artists: pd.DataFrame, artists: pd.DataFrame) -> list:
@@ -130,13 +132,11 @@ def main():
     args = parser.parse_args()
     
     # Load data
-    data_dir = PROJECT_ROOT / "data"
     print("📂 Loading data...")
-    
-    playlists = pd.read_parquet(data_dir / "playlists.parquet")
-    playlist_tracks = pd.read_parquet(data_dir / "playlist_tracks.parquet")
-    track_artists = pd.read_parquet(data_dir / "track_artists.parquet")
-    artists = pd.read_parquet(data_dir / "artists.parquet")
+    playlists = pd.read_parquet(DATA_DIR / "playlists.parquet")
+    playlist_tracks = pd.read_parquet(DATA_DIR / "playlist_tracks.parquet")
+    track_artists = pd.read_parquet(DATA_DIR / "track_artists.parquet")
+    artists = pd.read_parquet(DATA_DIR / "artists.parquet")
     
     # Filter to owned playlists only
     owned_playlists = playlists[playlists['is_owned'] == True].copy()

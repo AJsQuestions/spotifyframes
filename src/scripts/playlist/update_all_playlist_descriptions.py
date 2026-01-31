@@ -22,6 +22,7 @@ import spotipy
 from src.scripts.common import (
     setup_script_environment,
     get_project_root,
+    get_data_dir,
     get_spotify_client,
     get_user_info,
     api_call,
@@ -30,6 +31,7 @@ from src.scripts.common import (
 
 # Setup environment
 PROJECT_ROOT = setup_script_environment(__file__)
+DATA_DIR = get_data_dir(__file__)
 
 # Import sync-specific function (will be extracted later)
 from src.scripts.automation.sync import _update_playlist_description_with_genres
@@ -44,10 +46,8 @@ def main():
     args = parser.parse_args()
     
     # Load data
-    data_dir = PROJECT_ROOT / "data"
     print("📂 Loading data...")
-    
-    playlists = pd.read_parquet(data_dir / "playlists.parquet")
+    playlists = pd.read_parquet(DATA_DIR / "playlists.parquet")
     
     # Filter to owned playlists only
     owned_playlists = playlists[playlists['is_owned'] == True].copy()

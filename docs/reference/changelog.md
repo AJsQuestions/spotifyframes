@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.0.0] - 2025-01-30
+
+### 🎉 Major Release: SpotiM8 v5.0 — Professional SaaS-Grade Refactor
+
+### Added
+- **Streamlit Dashboard** - Minimal GUI for sync, reports, and playlist operations (`streamlit run dashboard/app.py`)
+- **src/data Package** - `export_table()` and `MarketFrames` for CLI export and market (browse/search) commands
+- **_sync_impl Package** - Sync logic split into `mood`, `genre_compute`, `workflow`, `renames`, `history` for single source of truth
+- **Canonical Paths** - `project_path.get_project_root()` and `get_data_dir()`; data folder lives under SPOTIM8 by default
+- **Analysis-Only Notebooks** - 5 demonstrative notebooks (library, playlist, listening history, redundant playlists, crashes); sync/automation removed from notebooks
+
+### Changed
+- **sync.py** - Thin facade: imports from _sync_impl and config, re-exports for backward compatibility; duplicate function bodies removed
+- **Data Directory** - Default `data/` is under project root (SPOTIM8); override with `SPOTIM8_DATA_DIR` or `DATA_DIR`
+- **Notebooks** - Removed 01_sync_data and 05_liked_songs_monthly_playlists; notebooks use function calls for views/analysis only
+- **notebook_helpers** - Sync/credential helpers removed; `get_data_dir()` added; view helpers for library overview, top artists, popularity, release years
+
+### Removed
+- Duplicate definitions in sync.py (mood, genre compute, workflow, renames, history); all from _sync_impl
+- Automation from notebooks (handled by CLI and dashboard)
+
+---
+
 ## [4.0.0] - 2025-01-22
 
 ### 🎉 Major Release: Production-Grade Features & Creative Enhancements

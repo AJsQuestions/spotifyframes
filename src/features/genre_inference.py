@@ -238,7 +238,8 @@ def infer_genres_comprehensive(
     2. Playlist patterns (learns from genre playlists)
     3. Track/album name heuristics (least reliable)
     
-    Returns ALL matching genres (tracks can have multiple).
+    For "broad" mode: Returns ONLY ONE broad genre (the first/most common match).
+    For "split" mode: Returns ALL matching genres (tracks can have multiple).
     
     Args:
         track_id: Track ID
@@ -251,9 +252,11 @@ def infer_genres_comprehensive(
         mode: "split" for HipHop/Dance/Other, "broad" for broad categories
     
     Returns:
-        List of inferred genres (can be multiple, e.g., ["HipHop", "Dance"])
+        For "broad" mode: List with single broad genre (e.g., ["Hip-Hop"])
+        For "split" mode: List of inferred genres (can be multiple, e.g., ["HipHop", "Dance"])
     """
     all_genres = set()
+    artist_broad_genres = []  # Track artist genres separately for priority
     
     # Method 1: Artist genres (most reliable)
     if track_artists is not None and artists is not None:
@@ -261,9 +264,12 @@ def infer_genres_comprehensive(
         if artist_genres:
             if mode == "split":
                 inferred = get_all_split_genres(artist_genres)
+                all_genres.update(inferred)
             else:
+                # For broad mode, track artist genres separately for priority
                 inferred = get_all_broad_genres(artist_genres)
-            all_genres.update(inferred)
+                artist_broad_genres = inferred
+                all_genres.update(inferred)
     
     # Method 2: Playlist patterns (learns from genre playlists)
     if playlist_tracks is not None and playlists is not None:
@@ -276,6 +282,16 @@ def infer_genres_comprehensive(
     if not all_genres and track_name:
         inferred = infer_genres_from_track_name(track_name, album_name)
         all_genres.update(inferred)
+    
+    # For broad mode: Return only ONE broad genre (prioritize artist genres)
+    if mode == "broad":
+        if artist_broad_genres:
+            # Prioritize artist genres - return the first artist genre
+            return [artist_broad_genres[0]]
+        elif all_genres:
+            # Fallback to first genre from any source
+            return [list(all_genres)[0]]
+        return []
     
     # For split mode, if we have HipHop or Dance, don't include Other
     # Other is only added if we have no HipHop/Dance matches
@@ -342,6 +358,9 @@ def enhance_artist_genres_from_playlists(
     If an artist's tracks frequently appear in playlists with genre-related names,
     add those genres to the artist.
     
+    IMPORTANT: Only infers BROAD genres (e.g., "Hip-Hop", "Electronic", "Rock").
+    Artists can have multiple broad genre tags.
+    
     Args:
         artists: DataFrame with artist_id and genres columns
         track_artists: DataFrame with track_id and artist_id columns
@@ -349,24 +368,18 @@ def enhance_artist_genres_from_playlists(
         playlists: DataFrame with playlist_id and name columns
     
     Returns:
-        Enhanced artists DataFrame with additional inferred genres
+        Enhanced artists DataFrame with additional inferred broad genres
     """
     artists = artists.copy()
     
     # Build artist -> tracks mapping
     artist_tracks = track_artists.groupby("artist_id")["track_id"].apply(set).to_dict()
     
-    # Build all Spotify genre keywords for matching
+    # Build broad genre keywords for matching (ONLY broad genres, not split genres)
     all_genre_keywords = {}
-    for genre, keywords in GENRE_SPLIT_RULES.items():
-        for kw in keywords:
-            all_genre_keywords[kw.lower()] = genre
-    
-    # Also check broad genres
     for keywords, category in GENRE_RULES:
         for kw in keywords:
-            if kw.lower() not in all_genre_keywords:  # Don't overwrite split genres
-                all_genre_keywords[kw.lower()] = category
+            all_genre_keywords[kw.lower()] = category
     
     # Analyze playlist patterns for each artist
     artists_needing_genres = []
@@ -431,19 +444,33 @@ def enhance_artist_genres_from_playlists(
         existing_genres = _parse_genres(artists.at[artist_idx_val, "genres"])
         existing_lower = {g.lower() for g in existing_genres}
         
-        # If artist has no genres, try to infer from playlists
-        if not existing_genres and genre_counts:
-            # Add genres that appear frequently in playlists
-            # Threshold: genre must appear in at least 2 different playlists
-            frequent_genres = [
-                genre for genre, count in genre_counts.items()
-                if count >= 2
-            ]
-            if frequent_genres:
-                # Use the most common genre or first few
-                new_genres = [g for g, _ in genre_counts.most_common(3) if g in frequent_genres]
+        # Convert existing genres to broad genres if they're not already
+        # Filter out any non-broad genres (like specific Spotify genres)
+        existing_broad_genres = set()
+        for g in existing_genres:
+            # Check if it's already a broad genre
+            broad_genres = get_all_broad_genres([g])
+            if broad_genres:
+                existing_broad_genres.update(broad_genres)
+            # Also check if the genre itself is a broad genre category
+            if g in [cat for _, cat in GENRE_RULES]:
+                existing_broad_genres.add(g)
+        
+        # If artist has no broad genres, try to infer from playlists
+        # Also add additional broad genres if they appear frequently
+        if genre_counts:
+            # Get all inferred broad genres (artists can have multiple)
+            inferred_broad_genres = set(genre_counts.keys())
+            
+            # Merge with existing broad genres
+            all_broad_genres = existing_broad_genres | inferred_broad_genres
+            
+            if all_broad_genres:
+                # Store as list (artists can have multiple broad genres)
+                new_genres = sorted(list(all_broad_genres))
                 artists.at[artist_idx_val, "genres"] = new_genres
-                artists_needing_genres.append((artist_id, new_genres))
+                if inferred_broad_genres:
+                    artists_needing_genres.append((artist_id, new_genres))
         elif existing_genres and genre_counts:
             # Add genres that appear frequently but aren't already present
             new_genres = []

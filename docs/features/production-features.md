@@ -68,7 +68,7 @@ Playlists now automatically include rich descriptions with:
 
 **Example Description:**
 ```
-Liked songs from Dec 2025 (automatically updated - manual additions welcome)
+Liked songs from Dec 2025 (automatically updated)
 
 📊 234 tracks | ⏱️ 15.2 hr | ⭐ 67/100
 📅 2018-2024

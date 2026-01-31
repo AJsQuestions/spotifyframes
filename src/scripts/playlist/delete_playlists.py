@@ -16,6 +16,7 @@ import spotipy
 from src.scripts.common import (
     setup_script_environment,
     get_project_root,
+    get_data_dir,
     get_spotify_client,
     get_user_info,
     api_call,
@@ -23,12 +24,12 @@ from src.scripts.common import (
 
 # Setup environment
 PROJECT_ROOT = setup_script_environment(__file__)
+DATA_DIR = get_data_dir(__file__)
 
 def delete_playlists_by_name(sp: spotipy.Spotify, playlist_names: list[str]) -> None:
     """Delete playlists by name."""
     # Load playlist data
-    data_dir = PROJECT_ROOT / "data"
-    playlists_df = pd.read_parquet(data_dir / "playlists.parquet")
+    playlists_df = pd.read_parquet(DATA_DIR / "playlists.parquet")
     
     # Find matching playlists
     matches = playlists_df[playlists_df['name'].isin(playlist_names)]
@@ -72,8 +73,7 @@ def delete_playlists_by_name(sp: spotipy.Spotify, playlist_names: list[str]) -> 
 def delete_playlists_by_id(sp: spotipy.Spotify, playlist_ids: list[str]) -> None:
     """Delete playlists by ID."""
     # Load playlist data to get names
-    data_dir = PROJECT_ROOT / "data"
-    playlists_df = pd.read_parquet(data_dir / "playlists.parquet")
+    playlists_df = pd.read_parquet(DATA_DIR / "playlists.parquet")
     
     # Find matching playlists
     matches = playlists_df[playlists_df['playlist_id'].isin(playlist_ids)]

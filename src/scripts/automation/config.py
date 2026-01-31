@@ -29,11 +29,11 @@ from src.scripts.common.config_helpers import (
 _parse_bool_env = parse_bool_env
 
 
-# Get project root (assumes this file is at src/scripts/automation/config.py)
-# Calculate from file: src/scripts/automation/config.py -> 4 levels up to project root
-# (config.py -> automation -> scripts -> src -> PROJECT_ROOT)
-SCRIPT_DIR = Path(__file__).resolve().parent
-PROJECT_ROOT = SCRIPT_DIR.parent.parent.parent.parent
+# Project root and data dir: single source of truth from project_path (SPOTIM8 directory)
+from src.scripts.common.project_path import get_project_root, get_data_dir as _get_data_dir
+
+PROJECT_ROOT = get_project_root(__file__)
+DATA_DIR = _get_data_dir(__file__)
 
 # Load .env file early so environment variables are available
 if DOTENV_AVAILABLE:
@@ -130,14 +130,16 @@ SEPARATOR_PREFIX = parse_str_env("PLAYLIST_SEPARATOR_PREFIX", "none")  # Options
 CAPITALIZATION = parse_str_env("PLAYLIST_CAPITALIZATION", "preserve")  # Options: title, upper, lower, preserve
 DESCRIPTION_TEMPLATE = parse_str_env(
     "PLAYLIST_DESCRIPTION_TEMPLATE",
-    "{description} from {period} (automatically updated; manual additions welcome)"
+    "{description} from {period} (automatically updated)"
 )
+# Top genres/moods to show in playlist descriptions (short format)
+DESCRIPTION_TOP_GENRES = parse_int_env("DESCRIPTION_TOP_GENRES", 5)
 
 # ============================================================================
 # PATHS AND CONSTANTS
 # ============================================================================
+# DATA_DIR set above via get_data_dir(__file__) so data lives under SPOTIM8
 
-DATA_DIR = PROJECT_ROOT / "data"
 LIKED_SONGS_PLAYLIST_ID = "__liked_songs__"  # Match spotim8 library constant
 
 # ============================================================================
@@ -167,6 +169,10 @@ SPOTIFY_MAX_GENRE_TAG_LENGTH = 200  # Maximum length for genre tag string
 # Description formatting
 DESCRIPTION_TRUNCATE_MARGIN = 10  # Characters to leave when truncating
 DESCRIPTION_PREVIEW_LENGTH = 100  # Characters to show in preview logs
+
+# Mood tags (Daylist-style) in playlist descriptions
+ENABLE_MOOD_TAGS = parse_bool_env("ENABLE_MOOD_TAGS", True)
+MOOD_MAX_TAGS = parse_int_env("MOOD_MAX_TAGS", 5)
 
 # ============================================================================
 # TRACK AND PLAYLIST CONSTANTS

@@ -36,12 +36,12 @@ Thank you for your interest in contributing to Spotim8! This document provides g
 
 - **Formatting**: Use `black` for code formatting
   ```bash
-  black spotim8/
+  black src/
   ```
 
 - **Linting**: Use `ruff` for linting
   ```bash
-  ruff check spotim8/
+  ruff check src/
   ```
 
 - **Type Hints**: Prefer type hints for function signatures
@@ -159,7 +159,7 @@ def test_feature_error_handling():
    black spotim8/ scripts/
    
    # Lint code
-   ruff check spotim8/ scripts/
+   ruff check src/ scripts/
    ```
 
 4. **Commit Changes**:
@@ -187,8 +187,8 @@ def test_feature_error_handling():
 
 - [ ] Code follows the style guide
 - [ ] Tests pass (`pytest tests/`)
-- [ ] Code is formatted (`black spotim8/ scripts/`)
-- [ ] Code is linted (`ruff check spotim8/ scripts/`)
+- [ ] Code is formatted (`black src/ scripts/`)
+- [ ] Code is linted (`ruff check src/ scripts/`)
 - [ ] Documentation updated if needed
 - [ ] Commit messages are clear and descriptive
 
